@@ -1,0 +1,6 @@
+{
+  "name": "maxma",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=18" }
+}
