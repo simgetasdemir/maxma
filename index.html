@@ -60,6 +60,11 @@ td:first-child{white-space:normal;min-width:12em}
 .neg{color:var(--bad)} .pos{color:var(--good)}
 .answer{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px;min-height:3em;max-width:100%;overflow-wrap:anywhere}
 .err{color:var(--bad);font-size:.9rem}
+.plats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.plat{border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:8px;align-content:start}
+.plat h3{margin:0;font-family:var(--font-display);font-size:1rem}
+.plat .st{font-size:.82rem;color:var(--muted)}
+a.btn{display:inline-block;text-decoration:none;font-weight:600;border-radius:8px;padding:8px 13px;background:var(--accent);color:var(--accent-fg)}
 details summary{cursor:pointer;font-weight:600}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -73,8 +78,20 @@ details summary{cursor:pointer;font-weight:600}
     <p class="lede">Trendyol, Meta veya Google reklam raporunu yükleyin. Sayfa her kampanyanın kâr edip etmediğini hesaplar, yapay zekâ da Türkçe öneriler ve yeni reklam metinleri yazar.</p>
   </header>
 
+  <section class="panel" id="connect" aria-labelledby="h-con" hidden>
+    <h2 id="h-con">Reklam hesaplarını bağlayın</h2>
+    <p class="note" style="margin:0">Hesabınızı bir kez bağlayın, kampanya verileri otomatik gelsin. Bağlantı yalnızca okuma izni ister; reklamlarınızda hiçbir şeyi değiştirmez.</p>
+    <div class="plats" id="plats"></div>
+    <div class="row">
+      <label class="label" for="days">Dönem</label>
+      <select id="days"><option value="7">Son 7 gün</option><option value="30" selected>Son 30 gün</option><option value="90">Son 90 gün</option></select>
+      <button class="primary" id="btn-pull" type="button" disabled>Bağlı hesaplardan verileri çek</button>
+      <span class="note" id="pull-msg"></span>
+    </div>
+  </section>
+
   <section class="panel" aria-labelledby="h-up">
-    <h2 id="h-up">Raporu yükleyin</h2>
+    <h2 id="h-up">Ya da raporu dosyadan yükleyin</h2>
     <div class="drop" id="drop">
       <div class="row">
         <label class="filebtn" for="file">CSV dosyası seç<input type="file" id="file" accept=".csv,.txt,text/csv"></label>
@@ -120,7 +137,7 @@ details summary{cursor:pointer;font-weight:600}
       <select id="tone"><option>Samimi</option><option>Kurumsal</option><option>Kampanya/indirim</option></select>
       <button id="btn-stop" type="button" hidden>Durdur</button>
     </div>
-    <p class="note" id="ai-off" hidden>Yapay zekâ önerileri bu sürümde yalnızca claude.ai içinde çalışır; çok yakında burada da açılacak. Yukarıdaki kâr/zarar hesapları tamamen çalışır.</p>
+    <p class="note" id="ai-off" hidden>Yapay zekâ önerileri henüz açılmadı. Yukarıdaki kâr/zarar hesapları tamamen çalışır.</p>
     <div class="answer" id="answer" aria-live="polite">Butona bastığınızda yapay zekâ bu rapora göre hangi reklamların para kaybettirdiğini, bütçenin nereye kaydırılacağını ve hangi ürünlerin öne çıkarılacağını Türkçe yazar.</div>
     <div class="row"><button id="btn-copyout" type="button" hidden>Metni kopyala</button><span class="note" id="copy-msg"></span></div>
   </section>
@@ -240,6 +257,11 @@ function render(){
   });
 }
 
+function loadRows(list,label){
+  rows=list; srcLabel=label; $("parse-err").hidden=true;
+  const s=$("src"); s.textContent="Şu an gösterilen: "; const b=document.createElement("b"); b.textContent=label; s.append(b);
+  render();
+}
 function load(text,label){
   try{ rows = parse(text); srcLabel=label; $("parse-err").hidden=true;
     const s=$("src"); s.textContent="Şu an gösterilen: "; const b=document.createElement("b"); b.textContent=label; s.append(b);
@@ -292,17 +314,25 @@ function errCopy(e){
   const c=e&&e.code;
   if(c==="not_granted") return "Yapay zekâ izni verilmedi. İzin verirseniz sayfa sizin Claude hesabınızla çalışır.";
   if(c==="rate_limited") return "Çok sık istek gönderildi. Bir dakika sonra tekrar deneyin.";
-  if(c==="aborted") return "Durduruldu.";
+  if(c==="aborted"||(e&&e.name==="AbortError")) return "Durduruldu.";
+  if(c==="server") return "Yapay zekâ yanıt vermedi"+(e.message?" ("+e.message+")":"")+". Biraz sonra tekrar deneyin.";
   return "Yapay zekâ şu an yanıt veremedi"+(c?" ("+c+")":"")+". Biraz sonra tekrar deneyin.";
 }
 async function ask(prompt){
-  if(!sample||!rows.length) return;
+  if((!sample&&!serverAI)||!rows.length) return;
   ctl=new AbortController();
   const btns=[$("btn-analyze"),$("btn-copy")]; btns.forEach(b=>b.disabled=true);
   $("btn-stop").hidden=false; $("btn-copyout").hidden=true; $("copy-msg").textContent="";
   ans.textContent="Düşünüyor... (ilk yanıt 10-60 saniye sürebilir)";
   try{
-    const {text}=await sample(prompt,{signal:ctl.signal,onText:({text})=>{ans.textContent=text;}});
+    let text;
+    if(sample){ ({text}=await sample(prompt,{signal:ctl.signal,onText:({text})=>{ans.textContent=text;}})); }
+    else {
+      const r=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt}),signal:ctl.signal});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw {code:"server",message:d.error};
+      text=d.text;
+    }
     ans.textContent=text; $("btn-copyout").hidden=false;
   }catch(e){
     ans.textContent=(e&&e.text? e.text+"\n\n":"")+errCopy(e);
@@ -320,9 +350,58 @@ $("btn-copyout").onclick=()=>{
 
 const aiBtns=[$("btn-analyze"),$("btn-copy")];
 aiBtns.forEach(b=>b.disabled=true);
-if(window.claude && claude.use){
-  claude.use("sample").then(s=>{ sample=s; if(s){ aiBtns.forEach(b=>b.disabled=false); } else { $("ai-off").hidden=false; } }).catch(()=>{$("ai-off").hidden=false;});
-} else { $("ai-off").hidden=false; }
+let serverAI=false;
+const statusP=fetch("/api/status",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
+function aiReady(){ aiBtns.forEach(b=>b.disabled=false); $("ai-off").hidden=true; }
+const claudeP=(window.claude&&claude.use)? claude.use("sample").catch(()=>null) : Promise.resolve(null);
+Promise.all([claudeP,statusP]).then(([s,st])=>{
+  sample=s; serverAI=!!(st&&st.ai);
+  if(sample||serverAI) aiReady(); else $("ai-off").hidden=false;
+  if(st&&st.platforms) setupConnect(st.platforms);
+});
+
+/* ---------- Hesap bağlantıları ---------- */
+const PL={google:"Google Ads",meta:"Meta (Facebook ve Instagram)",tiktok:"TikTok"};
+let plats={};
+function setupConnect(p){
+  plats=p; $("connect").hidden=false;
+  const box=$("plats"); box.textContent="";
+  for(const k of Object.keys(PL)){
+    const info=p[k]||{}; const d=document.createElement("div"); d.className="plat";
+    const h=document.createElement("h3"); h.textContent=PL[k];
+    const st=document.createElement("span"); st.className="st";
+    d.append(h,st);
+    if(!info.configured){ st.textContent="Kurulum bekleniyor: uygulama anahtarları henüz girilmedi."; }
+    else if(!info.connected){ st.textContent="Bağlı değil."; const a=document.createElement("a"); a.className="btn"; a.href="/api/connect/"+k; a.textContent="Hesabı bağla"; d.append(a); }
+    else {
+      st.innerHTML=""; const pill=document.createElement("span"); pill.className="pill good"; pill.textContent="Bağlı"; st.append(pill);
+      const b=document.createElement("button"); b.type="button"; b.textContent="Bağlantıyı kaldır";
+      b.onclick=async()=>{ b.disabled=true; await fetch("/api/disconnect?platform="+k,{method:"POST"}).catch(()=>{}); plats[k].connected=false; setupConnect(plats); };
+      d.append(b);
+    }
+    box.append(d);
+  }
+  $("btn-pull").disabled=!Object.values(p).some(x=>x.connected);
+}
+$("btn-pull").onclick=async()=>{
+  const btn=$("btn-pull"), msg=$("pull-msg"); btn.disabled=true; msg.textContent="Veriler çekiliyor...";
+  const days=$("days").value, all=[], errs=[];
+  const keys=Object.keys(PL).filter(k=>plats[k]&&plats[k].connected);
+  await Promise.all(keys.map(async k=>{
+    try{ const r=await fetch("/api/report?platform="+k+"&days="+days,{cache:"no-store"}); const d=await r.json();
+      if(!r.ok) throw new Error(d.error||r.status); all.push(...d.rows);
+    }catch(e){ errs.push(PL[k]+": "+e.message); }
+  }));
+  btn.disabled=false;
+  if(all.length){ loadRows(all,"bağlı hesaplar, son "+days+" gün ("+all.length+" kampanya)"); }
+  msg.textContent = errs.length ? "Bazı hesaplar okunamadı. "+errs.join(" · ") : (all.length? "Güncellendi." : "Bu dönemde kampanya verisi bulunamadı.");
+};
+(function(){
+  const q=new URLSearchParams(location.search); const m=$("pull-msg");
+  if(q.get("baglandi")) m.textContent=(PL[q.get("baglandi")]||"Hesap")+" bağlandı. Verileri çekebilirsiniz.";
+  if(q.get("hata")) m.textContent="Bağlantı kurulamadı: "+q.get("hata");
+  if(q.has("baglandi")||q.has("hata")) history.replaceState(null,"",location.pathname);
+})();
 
 load(SAMPLE,"örnek rapor (gerçek veri değildir)");
 })();
