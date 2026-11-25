@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Reklam Analiz Asistanı</title>
+<title>Reklam Asistanı</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one working column; summary tiles, then campaign table, then AI panel */
+/* Layout: app shell; left sidebar nav, sticky filter bar, views for Panel / Kampanyalar / Öneriler / Veri */
 :root{
   --bg:#f5f7f6; --surface:#ffffff; --fg:#14211d; --muted:#5b6b66; --line:#dbe3e0;
   --accent:#0f6b5a; --accent-fg:#ffffff; --accent-soft:#e2f1ec;
@@ -24,13 +24,62 @@
   --accent:#4fc4a8; --accent-fg:#0b1512; --accent-soft:#183631;
   --good:#6bd49a; --good-bg:#16301f; --warn:#f0bb5a; --warn-bg:#33270f; --bad:#ff8a80; --bad-bg:#3a1a18; color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.55}
-.wrap{max-width:1040px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:22px}
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+.side{background:var(--surface);border-right:1px solid var(--line);padding-block:20px;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:14px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:1.05rem}
+.brand i{width:28px;height:28px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:var(--accent-fg);font-style:normal;font-size:.9rem}
+.nav{display:grid;gap:4px}
+.nav a{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;color:var(--fg);text-decoration:none;font-weight:500}
+.nav a:hover{background:var(--bg)}
+.nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.nav .count{font-size:.72rem;font-weight:700;min-width:22px;text-align:center;padding:1px 7px;border-radius:999px;background:var(--bad-bg);color:var(--bad)}
+.side .foot{margin-top:auto;font-size:.78rem;color:var(--muted)}
+.main{min-width:0;display:grid;align-content:start}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.topbar h1{font-size:1.3rem}
+.wrap{width:100%;max-width:1180px;padding-block:22px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:18px;align-content:start}
+.grid2{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:18px}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+@media (max-width:1240px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:4px}
+.kpi b{font-family:var(--font-display);font-size:1.5rem;font-variant-numeric:tabular-nums;line-height:1.15}
+.delta{font-size:.78rem;font-weight:600;font-variant-numeric:tabular-nums}
+.delta.up{color:var(--good)} .delta.down{color:var(--bad)} .delta.flat{color:var(--muted)}
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--font-body)}
+.legend{display:flex;gap:14px;font-size:.8rem;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle;background:var(--c)}
+.bars{display:grid;gap:10px}
+.bar{display:grid;gap:4px}
+.bar .top{display:flex;justify-content:space-between;gap:8px;font-size:.86rem}
+.bar .track{height:8px;border-radius:999px;background:var(--bg);overflow:hidden}
+.bar .fill{height:100%;background:var(--accent);border-radius:999px}
+.acts{display:grid;gap:10px}
+.act{border:1px solid var(--line);border-left:4px solid var(--sev);border-radius:8px;padding:12px 14px;display:grid;gap:6px;background:var(--surface)}
+.act.bad{--sev:var(--bad)} .act.good{--sev:var(--good)} .act.warn{--sev:var(--warn)}
+.act h3{margin:0;font-size:.95rem;font-weight:600}
+.act p{margin:0;font-size:.86rem;color:var(--muted)}
+.act .row button{padding:6px 11px;font-size:.84rem}
+.act.done{opacity:.55}
+.view{display:grid;gap:18px;min-width:0}
+.view[hidden]{display:none!important}
+@media (max-width:820px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .side>*{min-width:0}
+  .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);flex-direction:row;flex-wrap:wrap;align-items:center;padding-block:10px;padding-right:max(16px,env(safe-area-inset-right,0px));padding-left:max(16px,env(safe-area-inset-left,0px));gap:10px}
+  .nav{grid-auto-flow:column;overflow-x:auto;width:100%}
+  .nav a{white-space:nowrap;padding:7px 10px}
+  .side .foot{display:none}
+  .grid2{grid-template-columns:1fr}
+}
 h1,h2{font-family:var(--font-display);text-wrap:balance;margin:0;line-height:1.2}
 h1{font-size:1.9rem}
 h2{font-size:1.15rem}
 .lede{color:var(--muted);max-width:64ch;margin:6px 0 0}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:14px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:14px;min-width:0;align-content:start}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
 button,.filebtn{font:inherit;font-weight:600;border-radius:8px;padding:9px 14px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
@@ -72,90 +121,91 @@ details summary{cursor:pointer;font-weight:600}
 </head>
 <body>
 
-<div class="wrap">
-  <header>
-    <span class="badge">1. adım · deneme sürümü</span>
-    <h1 style="margin-top:8px">Reklam Analiz Asistanı</h1>
-    <p class="lede">Reklam hesaplarınızı bağlayın ya da raporunuzu yükleyin. Sayfa her kampanyanın kâr edip etmediğini hesaplar, yapay zekâ da Türkçe öneriler ve yeni reklam metinleri yazar.</p>
-  </header>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><i aria-hidden="true">R</i>Reklam Asistanı</div>
+    <nav class="nav" aria-label="Bölümler">
+      <a href="#panel" data-v="panel">Panel</a>
+      <a href="#kampanyalar" data-v="kampanyalar">Kampanyalar</a>
+      <a href="#oneriler" data-v="oneriler">Öneriler <span class="count" id="act-count" hidden></span></a>
+      <a href="#veri" data-v="veri">Veri ve bağlantılar</a>
+    </nav>
+    <p class="foot">Hesaplar yalnızca okuma izniyle bağlanır. Öneriler reklamlarınızı kendiliğinden değiştirmez.</p>
+  </aside>
 
-  <section class="panel" id="connect" aria-labelledby="h-con" hidden>
-    <h2 id="h-con">Reklam hesaplarını bağlayın</h2>
-    <p class="note" style="margin:0">Hesabınızı bir kez bağlayın, kampanya verileri otomatik gelsin. Bağlantı yalnızca okuma izni ister; reklamlarınızda hiçbir şeyi değiştirmez.</p>
-    <div class="plats" id="plats"></div>
-    <div class="row">
-      <label class="label" for="days">Dönem</label>
-      <select id="days" style="width:auto"><option value="7">Son 7 gün</option><option value="30" selected>Son 30 gün</option><option value="90">Son 90 gün</option><option value="custom">Tarih seç</option></select>
-      <span class="row" id="custom-range" hidden><input type="date" id="p-from" aria-label="Başlangıç tarihi"><span aria-hidden="true">–</span><input type="date" id="p-to" aria-label="Bitiş tarihi"></span>
-      <button class="primary" id="btn-pull" type="button" disabled>Bağlı hesaplardan verileri çek</button>
-      <span class="note" id="pull-msg"></span>
-    </div>
-  </section>
-
-  <section class="panel" aria-labelledby="h-up">
-    <h2 id="h-up">Ya da raporu dosyadan yükleyin</h2>
-    <div class="drop" id="drop">
-      <div class="row">
-        <label class="filebtn" for="file">CSV dosyası seç<input type="file" id="file" accept=".csv,.txt,text/csv"></label>
-        <span class="note" id="src">Henüz rapor yüklenmedi.</span>
-      </div>
-      <details>
-        <summary>Ya da tabloyu buraya yapıştırın</summary>
-        <div style="display:grid;gap:8px;margin-top:8px">
-          <textarea id="paste" placeholder="Excel'den kopyalayıp yapıştırın. İlk satır başlık olmalı: Kampanya, Ürün, Harcama, Gösterim, Tıklama, Satış, Ciro"></textarea>
-          <div><button id="btn-paste" type="button">Yapıştırılanı analiz et</button></div>
-        </div>
-      </details>
-      <p class="note" style="margin:0">Tanınan sütunlar: Tarih (Date/Day), Kampanya, Ürün, Ülke (Country), Harcama (Spend/Cost), Gösterim (Impressions), Tıklama (Clicks), Satış adedi (Purchases/Orders), Ciro (Revenue/Conversion value). Türkçe sayı biçimi (1.250,50) desteklenir.</p>
-    </div>
-    <div class="row">
-      <label class="label" for="margin">Ortalama brüt kâr marjı (%)</label>
-      <input type="number" id="margin" min="1" max="95" value="30">
-      <span class="note" id="be"></span>
-    </div>
-    <p class="err" id="parse-err" hidden></p>
-  </section>
-
-  <section class="panel" id="empty">
-    <h2>Sonuçlar burada görünecek</h2>
-    <p class="note" style="margin:0">Yukarıdan reklam raporunuzu (CSV) yükleyin ya da tabloyu yapıştırın. Özet, ülke ve tarih tabloları, kampanya durumu ve yapay zekâ önerileri yalnızca sizin yüklediğiniz veriden hesaplanır.</p>
-  </section>
-
-  <section class="panel res" aria-labelledby="h-sum" hidden>
-    <div class="row" style="justify-content:space-between">
-      <h2 id="h-sum">Özet</h2>
-      <div class="row">
+  <div class="main">
+    <div class="topbar">
+      <div><h1 id="view-title">Panel</h1><p class="note" id="period" style="margin:0"></p></div>
+      <div class="row res" hidden>
         <span class="row" id="date-filter" hidden><label class="label" for="d-from">Tarih</label><input type="date" id="d-from"><span aria-hidden="true">–</span><input type="date" id="d-to" aria-label="Bitiş tarihi"></span>
         <label class="label" for="country">Ülke</label><select id="country" style="width:auto"><option value="">Tüm ülkeler</option></select>
       </div>
     </div>
-    <p class="note" id="period" style="margin:0"></p>
-    <div class="tiles" id="tiles"></div>
-  </section>
 
-  <section class="panel" id="by-date" aria-labelledby="h-dt" hidden>
-    <h2 id="h-dt">Tarihe göre</h2>
-    <div class="tablebox"><table id="tbl-d"><thead><tr>
-      <th>Tarih</th><th>Durum</th><th>Harcama</th><th>Ciro</th><th>ROAS</th><th>Satış</th><th>Reklam sonrası kâr</th>
-    </tr></thead><tbody></tbody></table></div>
-  </section>
+    <div class="wrap">
+    <div class="view" data-view="panel">
+      <section class="panel emptymsg">
+      <h2>Henüz veri yok</h2>
+      <p class="note" style="margin:0">Reklam hesabınızı bağlayın ya da raporunuzu (CSV) yükleyin. Bütün rakamlar yalnızca sizin verinizden hesaplanır.</p>
+      <div><a class="btn" href="#veri">Veri ekle</a></div>
+    </section>
+      <div class="kpis res" id="kpis" hidden></div>
+      <div class="grid2 res" hidden>
+        <section class="panel" aria-labelledby="h-trend">
+          <div class="row" style="justify-content:space-between"><h2 id="h-trend">Harcama ve <span data-l="revenue">ciro</span></h2><div class="legend"><span style="--c:var(--muted)">Harcama</span><span style="--c:var(--accent)" data-l="revenue">Ciro</span></div></div>
+          <div id="trend"></div>
+        </section>
+        <section class="panel" aria-labelledby="h-ch">
+          <h2 id="h-ch">Kanallar</h2>
+          <div class="bars" id="channels"></div>
+        </section>
+      </div>
+      <section class="panel res" aria-labelledby="h-top" hidden>
+        <div class="row" style="justify-content:space-between"><h2 id="h-top">Öncelikli öneriler</h2><a href="#oneriler" class="note">Tümünü gör</a></div>
+        <div class="acts" id="acts-top"></div>
+      </section>
+      <div id="tiles" hidden></div>
+    </div>
 
-  <section class="panel" id="by-country" aria-labelledby="h-cty" hidden>
-    <h2 id="h-cty">Ülkelere göre</h2>
-    <div class="tablebox"><table id="tbl-c"><thead><tr>
-      <th>Ülke</th><th>Durum</th><th>Harcama</th><th>Ciro</th><th>ROAS</th><th>Satış</th><th>Reklam sonrası kâr</th>
-    </tr></thead><tbody></tbody></table></div>
-  </section>
-
-  <section class="panel res" aria-labelledby="h-tab" hidden>
+    <div class="view" data-view="kampanyalar" hidden>
+      <section class="panel emptymsg">
+      <h2>Henüz veri yok</h2>
+      <p class="note" style="margin:0">Reklam hesabınızı bağlayın ya da raporunuzu (CSV) yükleyin. Bütün rakamlar yalnızca sizin verinizden hesaplanır.</p>
+      <div><a class="btn" href="#veri">Veri ekle</a></div>
+    </section>
+      <section class="panel res" aria-labelledby="h-tab" hidden>
     <h2 id="h-tab">Kampanya bazında durum</h2>
     <p class="note" style="margin:0">ROAS = Ciro ÷ Harcama. Başabaş ROAS, kâr marjınıza göre zarar etmemek için gereken en düşük değerdir. Reklam sonrası kâr = Ciro × marj − Harcama.</p>
     <div class="tablebox"><table id="tbl"><thead><tr>
-      <th>Kampanya</th><th>Durum</th><th>Harcama</th><th>Ciro</th><th>ROAS</th><th>TO</th><th>Satış başı maliyet</th><th>Reklam sonrası kâr</th>
+      <th>Kampanya</th><th>Durum</th><th>Harcama</th><th data-l="revenue">Ciro</th><th>ROAS</th><th>TO</th><th data-l="cpa">Satış başı maliyet</th><th>Reklam sonrası kâr</th>
     </tr></thead><tbody></tbody></table></div>
   </section>
+      <section class="panel" id="by-country" aria-labelledby="h-cty" hidden>
+    <h2 id="h-cty">Ülkelere göre</h2>
+    <div class="tablebox"><table id="tbl-c"><thead><tr>
+      <th>Ülke</th><th>Durum</th><th>Harcama</th><th data-l="revenue">Ciro</th><th>ROAS</th><th data-l="orders">Satış</th><th>Reklam sonrası kâr</th>
+    </tr></thead><tbody></tbody></table></div>
+  </section>
+      <section class="panel" id="by-date" aria-labelledby="h-dt" hidden>
+    <h2 id="h-dt">Tarihe göre</h2>
+    <div class="tablebox"><table id="tbl-d"><thead><tr>
+      <th>Tarih</th><th>Durum</th><th>Harcama</th><th data-l="revenue">Ciro</th><th>ROAS</th><th data-l="orders">Satış</th><th>Reklam sonrası kâr</th>
+    </tr></thead><tbody></tbody></table></div>
+  </section>
+    </div>
 
-  <section class="panel res" aria-labelledby="h-ai" hidden>
+    <div class="view" data-view="oneriler" hidden>
+      <section class="panel emptymsg">
+      <h2>Henüz veri yok</h2>
+      <p class="note" style="margin:0">Reklam hesabınızı bağlayın ya da raporunuzu (CSV) yükleyin. Bütün rakamlar yalnızca sizin verinizden hesaplanır.</p>
+      <div><a class="btn" href="#veri">Veri ekle</a></div>
+    </section>
+      <section class="panel res" aria-labelledby="h-acts" hidden>
+        <h2 id="h-acts">Önerilen aksiyonlar</h2>
+        <p class="note" style="margin:0">Verinize göre otomatik çıkarılır. Uyguladığınızı "Yapıldı" ile işaretleyin; bu sayfa reklamlarınızda değişiklik yapmaz.</p>
+        <div class="acts" id="acts"></div>
+      </section>
+      <section class="panel res" aria-labelledby="h-ai" hidden>
     <h2 id="h-ai">Yapay zekâ önerileri</h2>
     <div class="row">
       <button class="primary" id="btn-analyze" type="button">Raporu yorumla</button>
@@ -168,6 +218,61 @@ details summary{cursor:pointer;font-weight:600}
     <div class="answer" id="answer" aria-live="polite">Butona bastığınızda yapay zekâ bu rapora göre hangi reklamların para kaybettirdiğini, bütçenin nereye kaydırılacağını ve hangi ürünlerin öne çıkarılacağını Türkçe yazar.</div>
     <div class="row"><button id="btn-copyout" type="button" hidden>Metni kopyala</button><span class="note" id="copy-msg"></span></div>
   </section>
+    </div>
+
+    <div class="view" data-view="veri" hidden>
+      <section class="panel" id="connect" aria-labelledby="h-con" hidden>
+    <h2 id="h-con">Reklam hesaplarını bağlayın</h2>
+    <p class="note" style="margin:0">Hesabınızı bir kez bağlayın, kampanya verileri otomatik gelsin. Bağlantı yalnızca okuma izni ister; reklamlarınızda hiçbir şeyi değiştirmez.</p>
+    <div class="plats" id="plats"></div>
+    <div class="row">
+      <label class="label" for="days">Dönem</label>
+      <select id="days" style="width:auto"><option value="7">Son 7 gün</option><option value="30" selected>Son 30 gün</option><option value="90">Son 90 gün</option><option value="custom">Tarih seç</option></select>
+      <span class="row" id="custom-range" hidden><input type="date" id="p-from" aria-label="Başlangıç tarihi"><span aria-hidden="true">–</span><input type="date" id="p-to" aria-label="Bitiş tarihi"></span>
+      <button class="primary" id="btn-pull" type="button" disabled>Bağlı hesaplardan verileri çek</button>
+      <span class="note" id="pull-msg"></span>
+    </div>
+  </section>
+      <section class="panel" aria-labelledby="h-up">
+    <h2 id="h-up">Raporu dosyadan yükleyin</h2>
+    <div class="drop" id="drop">
+      <div class="row">
+        <label class="filebtn" for="file">CSV dosyası seç<input type="file" id="file" accept=".csv,.txt,text/csv"></label>
+        <span class="note" id="src">Henüz rapor yüklenmedi.</span>
+      </div>
+      <details>
+        <summary>Ya da tabloyu buraya yapıştırın</summary>
+        <div style="display:grid;gap:8px;margin-top:8px">
+          <textarea id="paste" placeholder="Excel'den kopyalayıp yapıştırın. İlk satır başlık olmalı: Kampanya, Ürün/Hizmet, Harcama, Gösterim, Tıklama, Satış veya Başvuru, Ciro"></textarea>
+          <div><button id="btn-paste" type="button">Yapıştırılanı analiz et</button></div>
+        </div>
+      </details>
+      <p class="note" style="margin:0">Tanınan sütunlar: Tarih (Date/Day), Platform/Kanal, Kampanya, Ürün/Hizmet, Ülke (Country), Harcama (Spend/Cost), Gösterim (Impressions), Tıklama (Clicks), Satış veya Başvuru (Purchases/Leads/Results/Conversions), Ciro (Revenue/Conversion value; başvuru modunda gerekmez). Türkçe sayı biçimi (1.250,50) desteklenir.</p>
+    </div>
+    <div class="row">
+      <label class="label" for="mode">Reklamın sonucu</label>
+      <select id="mode" style="width:auto">
+        <option value="sale">Satış ve ciro (online satış, e-ticaret, online sigorta)</option>
+        <option value="lead">Başvuru, form, arama (galeri, sigorta acentesi, klinik, danışmanlık)</option>
+      </select>
+    </div>
+    <div class="row" id="sale-set">
+      <label class="label" for="margin">Ortalama brüt kâr marjı (%)</label>
+      <input type="number" id="margin" min="1" max="95" value="30">
+    </div>
+    <div class="row" id="lead-set" hidden>
+      <label class="label" for="lead-rate">Başvuruların müşteriye dönüşme oranı (%)</label>
+      <input type="number" id="lead-rate" min="0.1" max="100" step="0.1" value="10">
+      <label class="label" for="lead-value">Bir müşteriden ortalama kâr (TL)</label>
+      <input type="number" id="lead-value" min="1" step="1" value="5000" style="width:9em">
+    </div>
+    <p class="note" id="be" style="margin:0"></p>
+    <p class="note" id="mode-note" style="margin:0" hidden></p>
+    <p class="err" id="parse-err" hidden></p>
+  </section>
+    </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -180,11 +285,12 @@ const ALIASES = {
   name:["kampanya","kampanya adı","campaign","campaign name","reklam","reklam adı","ad name","ad set name","reklam seti adı"],
   product:["ürün","ürün adı","product","urun","stok kodu","sku"],
   spend:["harcama","harcanan tutar","maliyet","tutar","spend","amount spent","amount spent (try)","cost","reklam harcaması","toplam harcama"],
+  channel:["platform","kanal","channel","kaynak","source","yayıncı"],
   date:["tarih","gün","gun","date","day","başlangıç tarihi","reporting starts","rapor başlangıcı","stat_time_day"],
   country:["ülke","ulke","country","country/region","ülke/bölge","country code","ülke kodu","region","konum"],
   imp:["gösterim","gösterimler","impressions","impr.","görüntülenme"],
   clicks:["tıklama","tıklamalar","clicks","link clicks","bağlantı tıklamaları"],
-  orders:["satış","satış adedi","sipariş","sipariş sayısı","purchases","orders","conversions","dönüşüm","dönüşümler","satılan adet"],
+  orders:["satış","satış adedi","sipariş","sipariş sayısı","purchases","orders","conversions","dönüşüm","dönüşümler","satılan adet","başvuru","başvurular","leads","lead","potansiyel müşteri","potansiyel müşteriler","form","formlar","results","sonuçlar","aramalar","calls","teklif talebi"],
   revenue:["ciro","gelir","satış tutarı","revenue","conversion value","purchase conversion value","conv. value","dönüşüm değeri","satış geliri"]
 };
 const norm = s => String(s||"").trim().toLocaleLowerCase("tr").replace(/\s+/g," ").replace(/^"|"$/g,"");
@@ -228,7 +334,7 @@ function parse(text){
   for(let i=1;i<lines.length;i++){
     const c = splitLine(lines[i],d);
     const g = k => idx[k]>=0 ? c[idx[k]] : "";
-    const r = { name:(g("name")||("Satır "+i)).trim(), product:(g("product")||"").trim(), country:(g("country")||"").trim(), date:pdate(g("date")),
+    const r = { name:(g("name")||("Satır "+i)).trim(), product:(g("product")||"").trim(), country:(g("country")||"").trim(), date:pdate(g("date")), channel:(g("channel")||"").trim(),
       spend:num(g("spend")), imp:num(g("imp")), clicks:num(g("clicks")), orders:num(g("orders")), revenue:num(g("revenue")) };
     if(/^(toplam|total)/i.test(r.name)) continue;
     if(r.spend||r.revenue) out.push(r);
@@ -241,7 +347,14 @@ const tl = n => n.toLocaleString("tr-TR",{maximumFractionDigits:0})+" TL";
 const f2 = n => n.toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
 const pct = n => "%"+n.toLocaleString("tr-TR",{maximumFractionDigits:1});
 
-function margin(){ const m = Math.min(95,Math.max(1,parseFloat($("margin").value)||30)); return m/100; }
+function isLead(){ return $("mode").value==="lead"; }
+function leadRate(){ return Math.min(100,Math.max(0.1,parseFloat($("lead-rate").value)||10))/100; }
+function leadValue(){ return Math.max(1,parseFloat($("lead-value").value)||5000); }
+// Başvuru modunda "ciro" = başvuru × dönüşüm oranı × müşteri başı kâr (zaten kâr olduğu için marj %100)
+function margin(){ if(isLead()) return 1; const m = Math.min(95,Math.max(1,parseFloat($("margin").value)||30)); return m/100; }
+function revOf(r){ return isLead()? r.orders*leadRate()*leadValue() : r.revenue; }
+function LBL(k){ const l=isLead(); return ({revenue:l?"Tahmini kazanç":"Ciro", orders:l?"Başvuru":"Satış", cpa:l?"Başvuru başı maliyet":"Satış başı maliyet"})[k]; }
+function applyLabels(){ document.querySelectorAll("[data-l]").forEach(el=>el.textContent=LBL(el.dataset.l)); }
 
 function enrich(r){
   const m = margin(), be = 1/m;
@@ -260,7 +373,7 @@ function sumRows(list,keyFn,base){
   const m=new Map();
   for(const r of list){ const k=keyFn(r); let a=m.get(k);
     if(!a){ a=Object.assign({spend:0,imp:0,clicks:0,orders:0,revenue:0,countries:new Set()},base(r)); m.set(k,a); }
-    a.spend+=r.spend; a.imp+=r.imp; a.clicks+=r.clicks; a.orders+=r.orders; a.revenue+=r.revenue; if(r.country) a.countries.add(ckey(r.country)); }
+    a.spend+=r.spend; a.imp+=r.imp; a.clicks+=r.clicks; a.orders+=r.orders; a.revenue+=revOf(r); if(r.country) a.countries.add(ckey(r.country)); }
   return [...m.values()];
 }
 function hasCountry(){ return rows.some(r=>r.country); }
@@ -331,7 +444,11 @@ function renderCountries(){
 }
 function render(){
   const m = margin(), be = 1/m;
-  $("be").textContent = "Başabaş ROAS: "+f2(be)+" (her 1 TL reklama en az "+f2(be)+" TL ciro)";
+  applyLabels();
+  $("sale-set").hidden=isLead(); $("lead-set").hidden=!isLead();
+  $("be").textContent = isLead()
+    ? "Başabaş başvuru maliyeti: "+tl(leadRate()*leadValue())+". Bir başvuru bundan pahalıya geliyorsa o reklam zarar ettiriyor."
+    : "Başabaş ROAS: "+f2(be)+" (her 1 TL reklama en az "+f2(be)+" TL ciro)";
   const list = view().map(enrich);
   renderCountries();
   renderDates();
@@ -362,23 +479,165 @@ function render(){
     cell(tl(r.profit), r.profit<0?"neg":"pos");
     tb.append(tr);
   });
+  renderDash();
 }
 
 function showResults(){
   const has=rows.length>0;
   document.querySelectorAll(".res").forEach(el=>el.hidden=!has);
-  $("empty").hidden=has;
+  document.querySelectorAll(".emptymsg").forEach(el=>el.hidden=has);
+  route();
 }
+
+/* ---------- Panel (dashboard) ---------- */
+function channelOf(r){
+  if(r.channel) return r.channel;
+  const p=(r.product||"").split(" · ")[0];
+  return ["Google Ads","Meta","TikTok"].includes(p)? p : "Yüklenen rapor";
+}
+function totals(list){ return list.reduce((a,r)=>({spend:a.spend+r.spend,revenue:a.revenue+revOf(r),orders:a.orders+r.orders,clicks:a.clicks+r.clicks,imp:a.imp+r.imp}),{spend:0,revenue:0,orders:0,clicks:0,imp:0}); }
+function kpiSet(t){ const m=margin(); return {
+  spend:t.spend, revenue:t.revenue, roas:t.spend? t.revenue/t.spend:0, profit:t.revenue*m-t.spend, orders:t.orders, cpa:t.orders? t.spend/t.orders:0 }; }
+function renderKpis(){
+  const list=filtered(); const cur=kpiSet(totals(list));
+  // Karşılaştırma: seçilen dönem ikiye bölünür, ikinci yarı ilk yarıyla kıyaslanır
+  let prev=null;
+  const ds=[...new Set(list.map(r=>r.date).filter(Boolean))].sort();
+  if(ds.length>=2){ const mid=ds[Math.ceil(ds.length/2)];
+    prev={a:kpiSet(totals(list.filter(r=>r.date&&r.date<mid))), b:kpiSet(totals(list.filter(r=>r.date&&r.date>=mid)))}; }
+  const defs=[["spend","Harcama",tl,false],["revenue",LBL("revenue"),tl,true],["roas","ROAS",v=>f2(v),true],["profit","Reklam sonrası kâr",tl,true],["orders",LBL("orders"),v=>String(Math.round(v)),true],["cpa",LBL("cpa"),tl,false]];
+  const box=$("kpis"); box.textContent="";
+  for(const [k,label,fmt,upGood] of defs){
+    const d=document.createElement("div"); d.className="kpi";
+    const l=document.createElement("span"); l.className="label"; l.textContent=label;
+    const b=document.createElement("b"); b.textContent=fmt(cur[k]); if(k==="profit") b.className=cur[k]<0?"neg":"pos";
+    const dl=document.createElement("span"); dl.className="delta flat";
+    if(prev && prev.a[k]){ const ch=(prev.b[k]-prev.a[k])/Math.abs(prev.a[k])*100; const good=upGood? ch>0 : ch<0;
+      dl.className="delta "+(Math.abs(ch)<1?"flat":(good?"up":"down"));
+      dl.textContent=(ch>=0?"▲ ":"▼ ")+"%"+Math.abs(ch).toLocaleString("tr-TR",{maximumFractionDigits:0})+" son yarıda"; }
+    else dl.textContent=prev? "–" : "Kıyas için tarihli veri gerekir";
+    d.append(l,b,dl); box.append(d);
+  }
+}
+function renderTrend(){
+  const box=$("trend"); box.textContent="";
+  const days=sumRows(filtered().filter(r=>r.date), r=>r.date, r=>({name:r.date})).sort((a,b)=>a.name<b.name?-1:1);
+  if(days.length<2){ const p=document.createElement("p"); p.className="note"; p.textContent="Grafik için raporda en az iki farklı tarih olmalı (Tarih / Day sütunu)."; box.append(p); return; }
+  const W=640,H=230,L=52,R=14,T=12,B=28, max=Math.max(...days.map(d=>Math.max(d.spend,d.revenue)))||1;
+  const nice=(()=>{ const e=Math.pow(10,Math.floor(Math.log10(max))); for(const m of [1,2,2.5,5,10]) if(m*e>=max) return m*e; return 10*e; })();
+  const x=i=>L+(W-L-R)*i/(days.length-1), y=v=>T+(H-T-B)*(1-v/nice);
+  const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg");
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("class","chart"); svg.setAttribute("role","img"); svg.setAttribute("aria-label","Günlük harcama ve ciro grafiği");
+  const el=(t,a)=>{ const e=document.createElementNS(ns,t); for(const k in a) e.setAttribute(k,a[k]); svg.append(e); return e; };
+  for(let i=0;i<=4;i++){ const v=nice*i/4; el("line",{x1:L,x2:W-R,y1:y(v),y2:y(v),stroke:"var(--line)","stroke-width":1});
+    const t=el("text",{x:L-8,y:y(v)+4,"text-anchor":"end"}); t.textContent=v>=1000? (v/1000).toLocaleString("tr-TR",{maximumFractionDigits:1})+" B" : String(Math.round(v)); }
+  const step=Math.ceil(days.length/6);
+  days.forEach((d,i)=>{ if(i%step===0||i===days.length-1){ const t=el("text",{x:x(i),y:H-8,"text-anchor":i===0?"start":(i===days.length-1?"end":"middle")}); const [,mm,dd]=d.name.split("-"); t.textContent=(+dd)+"."+mm; } });
+  const path=k=>days.map((d,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(d[k]).toFixed(1)).join(" ");
+  el("path",{d:path("revenue")+` L${x(days.length-1).toFixed(1)} ${y(0)} L${L} ${y(0)} Z`,fill:"var(--accent-soft)",stroke:"none"});
+  el("path",{d:path("spend"),fill:"none",stroke:"var(--muted)","stroke-width":2,"stroke-dasharray":"5 4"});
+  el("path",{d:path("revenue"),fill:"none",stroke:"var(--accent)","stroke-width":2.5});
+  el("circle",{cx:x(days.length-1),cy:y(days[days.length-1].revenue),r:4,fill:"var(--accent)"});
+  box.append(svg);
+}
+function renderChannels(){
+  const box=$("channels"); box.textContent="";
+  const list=sumRows(filtered().map(r=>Object.assign({},r,{ch:channelOf(r)})), r=>r.ch, r=>({name:r.ch})).map(enrich).sort((a,b)=>b.spend-a.spend);
+  const total=list.reduce((a,r)=>a+r.spend,0)||1;
+  for(const r of list){
+    const d=document.createElement("div"); d.className="bar";
+    const top=document.createElement("div"); top.className="top";
+    const n=document.createElement("span"); n.textContent=r.name;
+    const v=document.createElement("span"); v.className="note"; v.textContent=tl(r.spend)+" · ROAS "+f2(r.roas);
+    top.append(n,v);
+    const tr=document.createElement("div"); tr.className="track"; const f=document.createElement("div"); f.className="fill"; f.style.width=(r.spend/total*100).toFixed(1)+"%"; tr.append(f);
+    d.append(top,tr); box.append(d);
+  }
+}
+function loadState(){ try{ return JSON.parse(localStorage.getItem("mx_acts")||"{}"); }catch(_){ return {}; } }
+function saveState(o){ try{ localStorage.setItem("mx_acts",JSON.stringify(o)); }catch(_){} }
+function buildActions(){
+  const be=1/margin(), out=[];
+  const camps=view().map(enrich); const total=camps.reduce((a,r)=>a+r.spend,0)||1;
+  for(const r of camps){
+    if(r.spend<=0) continue;
+    if(r.roas<be) out.push({key:"stop|"+r.name, sev:"bad", score:-r.profit,
+      title:"Durdurun ya da düzeltin: "+r.name,
+      text:tl(r.spend)+" harcandı, "+(isLead()? "başvuru başı maliyet "+(r.cpa==null?"hesaplanamadı (başvuru yok)":tl(r.cpa))+" (başabaş "+tl(leadRate()*leadValue())+")" : "ROAS "+f2(r.roas)+" (başabaş "+f2(be)+")")+". Bu dönemde tahmini "+tl(-r.profit)+" zarar. Hedeflemeyi daraltın veya bütçeyi kârlı kampanyalara aktarın."});
+    else if(r.roas>=be*1.5 && r.spend/total<0.35) out.push({key:"grow|"+r.name, sev:"good", score:r.profit*0.5,
+      title:"Bütçeyi artırın: "+r.name,
+      text:"ROAS "+f2(r.roas)+", başabaşın "+f2(r.roas/be)+" katı. Bütçeyi kademeli olarak %20 artırıp sonuçları izleyin."});
+    if(r.imp>=5000 && r.ctr!=null && r.ctr<0.8) out.push({key:"ctr|"+r.name, sev:"warn", score:r.spend*0.2,
+      title:"Reklamı yenileyin: "+r.name,
+      text:"Tıklama oranı "+pct(r.ctr)+" ile düşük. Yeni görsel ve başlık deneyin; aşağıdaki yapay zekâ yeni metin yazabilir."});
+  }
+  if(!$("country").value){
+    const ctys=sumRows(byDate().filter(r=>r.country), r=>ckey(r.country), r=>({name:ckey(r.country)})).map(enrich);
+    for(const c of ctys) if(c.roas<be && c.spend/total>0.05) out.push({key:"cty|"+c.name, sev:"bad", score:-c.profit,
+      title:cname(c.name)+" için harcamayı kısın",
+      text:tl(c.spend)+" harcandı, ROAS "+f2(c.roas)+". Bu ülkeyi kampanyalardan çıkarmak ya da teklifleri düşürmek "+tl(-c.profit)+" zararı önler."});
+  }
+  return out.sort((a,b)=>b.score-a.score);
+}
+function actCard(a,state){
+  const d=document.createElement("div"); const st=state[a.key];
+  d.className="act "+a.sev+(st?" done":"");
+  const h=document.createElement("h3"); h.textContent=a.title;
+  const p=document.createElement("p"); p.textContent=a.text;
+  const row=document.createElement("div"); row.className="row";
+  const set=v=>{ if(v) state[a.key]=v; else delete state[a.key]; saveState(state); renderActions(); };
+  if(st){ const s=document.createElement("span"); s.className="note"; s.textContent=st==="done"?"Yapıldı olarak işaretlendi":"Yoksayıldı";
+    const u=document.createElement("button"); u.type="button"; u.textContent="Geri al"; u.onclick=()=>set(null); row.append(s,u); }
+  else { const y=document.createElement("button"); y.type="button"; y.className="primary"; y.textContent="Yapıldı"; y.onclick=()=>set("done");
+    const n=document.createElement("button"); n.type="button"; n.textContent="Yoksay"; n.onclick=()=>set("skip"); row.append(y,n); }
+  d.append(h,p,row); return d;
+}
+function renderActions(){
+  const acts=buildActions(), state=loadState();
+  const open=acts.filter(a=>!state[a.key]);
+  const c=$("act-count"); c.textContent=String(open.length); c.hidden=!open.length||!rows.length;
+  const all=$("acts"); all.textContent="";
+  if(!acts.length){ const p=document.createElement("p"); p.className="note"; p.textContent="Şu an öncelikli bir aksiyon görünmüyor. Kampanyalar başabaş noktasının üzerinde."; all.append(p); }
+  for(const a of [...open, ...acts.filter(a=>state[a.key])]) all.append(actCard(a,state));
+  const top=$("acts-top"); top.textContent="";
+  if(!open.length){ const p=document.createElement("p"); p.className="note"; p.textContent="Bekleyen öneri yok."; top.append(p); }
+  for(const a of open.slice(0,3)) top.append(actCard(a,state));
+}
+function renderDash(){ if(!rows.length) return; renderKpis(); renderTrend(); renderChannels(); renderActions(); }
+
+/* ---------- Görünümler ---------- */
+const VIEWS={panel:"Panel",kampanyalar:"Kampanyalar",oneriler:"Öneriler",veri:"Veri ve bağlantılar"};
+function route(){
+  let v=location.hash.replace("#","");
+  if(!VIEWS[v]) v = rows.length? "panel" : "veri";
+  document.querySelectorAll(".view").forEach(el=>el.hidden=el.dataset.view!==v);
+  document.querySelectorAll(".nav a").forEach(a=>{ if(a.dataset.v===v) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  $("view-title").textContent=VIEWS[v];
+}
+window.addEventListener("hashchange",route);
+
+function autoMode(){
+  const n=$("mode-note"); n.hidden=true;
+  if(rows.length && !rows.some(r=>r.revenue>0) && rows.some(r=>r.orders>0) && !isLead()){
+    $("mode").value="lead"; saveSettings();
+    n.textContent="Raporda ciro yok, başvuru/sonuç sayısı var. Ölçüm \"Başvuru\" olarak ayarlandı; dönüşüm oranını ve müşteri başı kârı kendi rakamlarınızla düzeltin.";
+    n.hidden=false;
+  }
+}
+function saveSettings(){ try{ localStorage.setItem("mx_settings",JSON.stringify({mode:$("mode").value,margin:$("margin").value,rate:$("lead-rate").value,value:$("lead-value").value})); }catch(_){} }
+try{ const st=JSON.parse(localStorage.getItem("mx_settings")||"null"); if(st){ $("mode").value=st.mode||"sale"; $("margin").value=st.margin||30; $("lead-rate").value=st.rate||10; $("lead-value").value=st.value||5000; } }catch(_){}
+for(const id of ["mode","margin","lead-rate","lead-value"]) $(id).addEventListener("input",()=>{ saveSettings(); render(); });
+$("mode").addEventListener("change",()=>{ saveSettings(); $("mode-note").hidden=true; render(); });
 function loadRows(list,label){
-  rows=list; srcLabel=label; $("parse-err").hidden=true; fillCountries(); fillDates();
+  rows=list; autoMode(); srcLabel=label; $("parse-err").hidden=true; fillCountries(); fillDates();
   const s=$("src"); s.textContent="Şu an gösterilen: "; const b=document.createElement("b"); b.textContent=label; s.append(b);
   showResults(); render();
 }
 function load(text,label,restoring){
-  try{ rows = parse(text); srcLabel=label; $("parse-err").hidden=true; fillCountries(); fillDates();
+  try{ rows = parse(text); autoMode(); srcLabel=label; $("parse-err").hidden=true; fillCountries(); fillDates();
     const s=$("src"); s.textContent="Şu an gösterilen: "; const b=document.createElement("b"); b.textContent=label; s.append(b);
     showResults(); render();
-    if(!restoring){ try{ localStorage.setItem("mx_last_csv",JSON.stringify({text,label})); }catch(_){} }
+    if(!restoring){ try{ localStorage.setItem("mx_last_csv",JSON.stringify({text,label})); }catch(_){} location.hash="panel"; }
   }catch(e){ $("parse-err").textContent=e.message; $("parse-err").hidden=false; if(restoring){ try{ localStorage.removeItem("mx_last_csv"); }catch(_){} } }
 }
 
@@ -388,7 +647,6 @@ drop.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("over
 drop.addEventListener("dragleave",()=>drop.classList.remove("over"));
 drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("over"); const f=e.dataTransfer.files[0]; if(!f) return; const fr=new FileReader(); fr.onload=()=>load(String(fr.result),f.name); fr.readAsText(f,"utf-8");});
 $("btn-paste").onclick=()=>load($("paste").value,"yapıştırılan tablo");
-$("margin").addEventListener("input",render);
 $("country").addEventListener("change",render);
 $("d-from").addEventListener("change",render);
 $("d-to").addEventListener("change",render);
@@ -398,32 +656,34 @@ let sample=null, ctl=null;
 const ans=$("answer");
 function dataForAI(){
   const m=margin();
-  return "Kâr marjı: %"+Math.round(m*100)+" (başabaş ROAS "+f2(1/m)+")\n"+
+  return (isLead()
+      ? "Ölçüm: başvuru/potansiyel müşteri. Dönüşüm oranı %"+(leadRate()*100).toLocaleString("tr-TR")+", müşteri başı kâr "+tl(leadValue())+". Tahmini kazanç = başvuru × oran × müşteri başı kâr. Başabaş başvuru maliyeti "+tl(leadRate()*leadValue())+".\n"
+      : "Ölçüm: satış ve ciro. Kâr marjı: %"+Math.round(m*100)+" (başabaş ROAS "+f2(1/m)+")\n")+
     ($("period").textContent? $("period").textContent+"\n" : "")+
     "Ülke filtresi: "+($("country").value? cname($("country").value) : "tüm ülkeler")+"\n"+
     "(Satırlar kampanya ve ülke bazında toplanmıştır)\n"+
-    "Kampanya | Ürün | Ülke | Harcama TL | Gösterim | Tıklama | Satış | Ciro TL | ROAS | Reklam sonrası kâr TL\n"+
+    "Kampanya | Ürün/Hizmet | Ülke | Harcama TL | Gösterim | Tıklama | "+LBL("orders")+" | "+LBL("revenue")+" TL | ROAS | Reklam sonrası kâr TL\n"+
     sumRows(filtered(), r=>r.name+"\u0000"+r.product+"\u0000"+ckey(r.country), r=>({name:r.name,product:r.product,country:ckey(r.country)})).map(enrich).map(r=>[r.name,r.product||"-",cname(r.country),Math.round(r.spend),r.imp,r.clicks,r.orders,Math.round(r.revenue),f2(r.roas),Math.round(r.profit)].join(" | ")).join("\n");
 }
-const PROMPT_ANALYZE = d => `Sen Türk e-ticaret satıcılarına (Trendyol, Hepsiburada, kendi sitesi; Meta ve Google reklamları) danışmanlık yapan deneyimli bir performans pazarlama uzmanısın. Aşağıdaki reklam raporunu bir küçük işletme sahibine sade Türkçe ile yorumla. Jargon kullanırsan parantez içinde açıkla. Sayıları tablodan al, uydurma.
+const PROMPT_ANALYZE = d => `Sen Türkiye'deki işletmelere (e-ticaret, online sigorta, oto galeri, sağlık, eğitim, hizmet; Google, Meta ve TikTok reklamları) danışmanlık yapan deneyimli bir performans pazarlama uzmanısın. Aşağıdaki reklam raporunu işletme sahibine sade Türkçe ile yorumla. Jargon kullanırsan parantez içinde açıkla. Sayıları tablodan al, uydurma.
 
 Yanıtı tam olarak şu başlıklarla, düz metin olarak yaz (Markdown işareti kullanma, madde için "- " kullan):
 1) KISA ÖZET (2-3 cümle)
 2) PARA KAYBETTİREN REKLAMLAR (her biri için neden ve ne yapılmalı)
 3) BÜTÇE ÖNERİSİ (hangi kampanyadan ne kadar TL alınıp nereye aktarılmalı, gerekçesiyle)
-4) ÖNE ÇIKARILACAK ÜRÜNLER (rapor ülke bilgisi içeriyorsa hangi ülkelerde büyünüp hangilerinde kısılacağını da yaz)
+4) ÖNE ÇIKARILACAK ÜRÜN VE HİZMETLER (başvuru modundaysa başvuru başı maliyet ve kalite açısından değerlendir; rapor ülke bilgisi içeriyorsa hangi ülkelerde büyünüp hangilerinde kısılacağını da yaz)
 5) BU HAFTA YAPILACAK 3 İŞ
 
 Rapor:
 ${d}`;
-const PROMPT_COPY = (d,tone) => `Sen Türk e-ticaret satıcıları için reklam metni yazan bir metin yazarısın. Aşağıdaki rapora göre en kârlı 2 ürün ve kurtarılabilecek 1 ürün için reklam metinleri yaz. Ton: ${tone}. Abartılı veya yanıltıcı vaat ("en ucuz", "garanti" gibi kanıtlanamayan ifadeler) kullanma; Reklam Kurulu kurallarına uygun yaz.
+const PROMPT_COPY = (d,tone) => `Sen Türkiye'deki işletmeler için reklam metni yazan bir metin yazarısın. Aşağıdaki rapora göre en kârlı 2 ürün/hizmet ve kurtarılabilecek 1 ürün/hizmet için reklam metinleri yaz. Ton: ${tone}. Abartılı veya yanıltıcı vaat ("en ucuz", "garanti" gibi kanıtlanamayan ifadeler) kullanma; Reklam Kurulu kurallarına uygun yaz.
 
-Her ürün için düz metin olarak (Markdown işareti kullanma):
-ÜRÜN: ...
+Her biri için düz metin olarak (Markdown işareti kullanma):
+ÜRÜN/HİZMET: ...
 - Meta/Instagram ana metin (en fazla 125 karakter), 2 seçenek
 - Başlık (en fazla 40 karakter), 2 seçenek
 - Google arama başlığı (en fazla 30 karakter), 3 seçenek
-- Trendyol ürün başlığı önerisi (anahtar kelimeli)
+- Satış modundaysa pazaryeri (Trendyol/Hepsiburada) ürün başlığı önerisi; başvuru modundaysa form/arama çağrısı (CTA) önerisi
 
 Rapor:
 ${d}`;
@@ -516,7 +776,7 @@ $("btn-pull").onclick=async()=>{
     }catch(e){ errs.push(PL[k]+": "+e.message); }
   }));
   btn.disabled=false;
-  if(all.length){ loadRows(all,"bağlı hesaplar, "+lbl); }
+  if(all.length){ loadRows(all,"bağlı hesaplar, "+lbl); location.hash="panel"; }
   msg.textContent = errs.length ? "Bazı hesaplar okunamadı. "+errs.join(" · ") : (all.length? "Güncellendi." : "Bu dönemde kampanya verisi bulunamadı.");
 };
 (function(){
@@ -528,6 +788,7 @@ $("btn-pull").onclick=async()=>{
 
 // Son yüklenen rapor bu tarayıcıda hatırlanır (yalnızca bu cihazda)
 try{ const saved=localStorage.getItem("mx_last_csv"); if(saved){ const o=JSON.parse(saved); if(o&&o.text) load(o.text,o.label,true); } }catch(_){}
+route();
 })();
 </script>
 </body>
