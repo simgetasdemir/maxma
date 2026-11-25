@@ -76,7 +76,7 @@ details summary{cursor:pointer;font-weight:600}
   <header>
     <span class="badge">1. adım · deneme sürümü</span>
     <h1 style="margin-top:8px">Reklam Analiz Asistanı</h1>
-    <p class="lede">Trendyol, Meta veya Google reklam raporunu yükleyin. Sayfa her kampanyanın kâr edip etmediğini hesaplar, yapay zekâ da Türkçe öneriler ve yeni reklam metinleri yazar.</p>
+    <p class="lede">Reklam hesaplarınızı bağlayın ya da raporunuzu yükleyin. Sayfa her kampanyanın kâr edip etmediğini hesaplar, yapay zekâ da Türkçe öneriler ve yeni reklam metinleri yazar.</p>
   </header>
 
   <section class="panel" id="connect" aria-labelledby="h-con" hidden>
@@ -97,8 +97,7 @@ details summary{cursor:pointer;font-weight:600}
     <div class="drop" id="drop">
       <div class="row">
         <label class="filebtn" for="file">CSV dosyası seç<input type="file" id="file" accept=".csv,.txt,text/csv"></label>
-        <button id="btn-sample" type="button">Örnek raporu yükle</button>
-        <span class="note" id="src">Şu an gösterilen: <b>örnek rapor</b> (gerçek veri değildir)</span>
+        <span class="note" id="src">Henüz rapor yüklenmedi.</span>
       </div>
       <details>
         <summary>Ya da tabloyu buraya yapıştırın</summary>
@@ -117,7 +116,12 @@ details summary{cursor:pointer;font-weight:600}
     <p class="err" id="parse-err" hidden></p>
   </section>
 
-  <section class="panel" aria-labelledby="h-sum">
+  <section class="panel" id="empty">
+    <h2>Sonuçlar burada görünecek</h2>
+    <p class="note" style="margin:0">Yukarıdan reklam raporunuzu (CSV) yükleyin ya da tabloyu yapıştırın. Özet, ülke ve tarih tabloları, kampanya durumu ve yapay zekâ önerileri yalnızca sizin yüklediğiniz veriden hesaplanır.</p>
+  </section>
+
+  <section class="panel res" aria-labelledby="h-sum" hidden>
     <div class="row" style="justify-content:space-between">
       <h2 id="h-sum">Özet</h2>
       <div class="row">
@@ -143,7 +147,7 @@ details summary{cursor:pointer;font-weight:600}
     </tr></thead><tbody></tbody></table></div>
   </section>
 
-  <section class="panel" aria-labelledby="h-tab">
+  <section class="panel res" aria-labelledby="h-tab" hidden>
     <h2 id="h-tab">Kampanya bazında durum</h2>
     <p class="note" style="margin:0">ROAS = Ciro ÷ Harcama. Başabaş ROAS, kâr marjınıza göre zarar etmemek için gereken en düşük değerdir. Reklam sonrası kâr = Ciro × marj − Harcama.</p>
     <div class="tablebox"><table id="tbl"><thead><tr>
@@ -151,7 +155,7 @@ details summary{cursor:pointer;font-weight:600}
     </tr></thead><tbody></tbody></table></div>
   </section>
 
-  <section class="panel" aria-labelledby="h-ai">
+  <section class="panel res" aria-labelledby="h-ai" hidden>
     <h2 id="h-ai">Yapay zekâ önerileri</h2>
     <div class="row">
       <button class="primary" id="btn-analyze" type="button">Raporu yorumla</button>
@@ -168,44 +172,9 @@ details summary{cursor:pointer;font-weight:600}
 
 <script>
 (function(){
-const SAMPLE = `Tarih;Kampanya;Ürün;Ülke;Harcama;Gösterim;Tıklama;Satış;Ciro
-2026-11-03;Kış Montu - Arama;Kadın Kaban;TR;1.080,00;14.400;354;9;10.050,00
-2026-11-10;Kış Montu - Arama;Kadın Kaban;TR;1.188,00;15.840;389;10;11.055,00
-2026-11-17;Kış Montu - Arama;Kadın Kaban;TR;1.332,00;17.760;437;11;12.395,00
-2026-11-03;Kış Montu - Arama;Kadın Kaban;DE;375,00;3.960;105;2;2.490,00
-2026-11-10;Kış Montu - Arama;Kadın Kaban;DE;412,50;4.356;116;2;2.739,00
-2026-11-17;Kış Montu - Arama;Kadın Kaban;DE;462,50;4.884;130;3;3.071,00
-2026-11-03;Kış Montu - Yeniden Hedefleme;Kadın Kaban;TR;450,00;4.440;168;7;7.770,00
-2026-11-10;Kış Montu - Yeniden Hedefleme;Kadın Kaban;TR;495,00;4.884;185;8;8.547,00
-2026-11-17;Kış Montu - Yeniden Hedefleme;Kadın Kaban;TR;555,00;5.476;207;9;9.583,00
-2026-11-03;Kış Montu - Yeniden Hedefleme;Kadın Kaban;NL;126,00;1.080;39;2;1.800,00
-2026-11-10;Kış Montu - Yeniden Hedefleme;Kadın Kaban;NL;138,60;1.188;43;2;1.980,00
-2026-11-17;Kış Montu - Yeniden Hedefleme;Kadın Kaban;NL;155,40;1.332;48;2;2.220,00
-2026-11-03;Bot Koleksiyonu - Geniş Kitle;Deri Bot;TR;1.230,00;29.100;462;5;4.590,00
-2026-11-10;Bot Koleksiyonu - Geniş Kitle;Deri Bot;TR;1.353,00;32.010;508;6;5.049,00
-2026-11-17;Bot Koleksiyonu - Geniş Kitle;Deri Bot;TR;1.517,00;35.890;570;6;5.661,00
-2026-11-03;Bot Koleksiyonu - Geniş Kitle;Deri Bot;AZ;660,00;13.500;201;1;1.080,00
-2026-11-10;Bot Koleksiyonu - Geniş Kitle;Deri Bot;AZ;726,00;14.850;221;1;1.188,00
-2026-11-17;Bot Koleksiyonu - Geniş Kitle;Deri Bot;AZ;814,00;16.650;248;1;1.332,00
-2026-11-03;Atkı Bere Set - Vitrin;Atkı Bere Seti;TR;285,00;9.900;246;12;4.110,00
-2026-11-10;Atkı Bere Set - Vitrin;Atkı Bere Seti;TR;313,50;10.890;271;13;4.521,00
-2026-11-17;Atkı Bere Set - Vitrin;Atkı Bere Seti;TR;351,50;12.210;303;14;5.069,00
-2026-11-03;Atkı Bere Set - Vitrin;Atkı Bere Seti;DE;60,00;1.950;48;2;720,00
-2026-11-10;Atkı Bere Set - Vitrin;Atkı Bere Seti;DE;66,00;2.145;53;2;792,00
-2026-11-17;Atkı Bere Set - Vitrin;Atkı Bere Seti;DE;74,00;2.405;59;3;888,00
-2026-11-03;Çocuk Mont - Instagram;Çocuk Mont;TR;810,00;21.300;279;2;2.040,00
-2026-11-10;Çocuk Mont - Instagram;Çocuk Mont;TR;891,00;23.430;307;3;2.244,00
-2026-11-17;Çocuk Mont - Instagram;Çocuk Mont;TR;999,00;26.270;344;3;2.516,00
-2026-11-03;Çocuk Mont - Instagram;Çocuk Mont;AZ;210,00;5.100;57;0;255,00
-2026-11-10;Çocuk Mont - Instagram;Çocuk Mont;AZ;231,00;5.610;63;0;280,50
-2026-11-17;Çocuk Mont - Instagram;Çocuk Mont;AZ;259,00;6.290;70;0;314,50
-2026-11-03;Termal İçlik - Arama;Termal İçlik;TR;294,00;3.690;123;9;2.976,00
-2026-11-10;Termal İçlik - Arama;Termal İçlik;TR;323,40;4.059;135;10;3.273,60
-2026-11-17;Termal İçlik - Arama;Termal İçlik;TR;362,60;4.551;152;11;3.670,40`;
-
 const $ = id => document.getElementById(id);
 let rows = [];
-let srcLabel = "örnek rapor";
+let srcLabel = "";
 
 const ALIASES = {
   name:["kampanya","kampanya adı","campaign","campaign name","reklam","reklam adı","ad name","ad set name","reklam seti adı"],
@@ -395,16 +364,22 @@ function render(){
   });
 }
 
+function showResults(){
+  const has=rows.length>0;
+  document.querySelectorAll(".res").forEach(el=>el.hidden=!has);
+  $("empty").hidden=has;
+}
 function loadRows(list,label){
   rows=list; srcLabel=label; $("parse-err").hidden=true; fillCountries(); fillDates();
   const s=$("src"); s.textContent="Şu an gösterilen: "; const b=document.createElement("b"); b.textContent=label; s.append(b);
-  render();
+  showResults(); render();
 }
-function load(text,label){
+function load(text,label,restoring){
   try{ rows = parse(text); srcLabel=label; $("parse-err").hidden=true; fillCountries(); fillDates();
     const s=$("src"); s.textContent="Şu an gösterilen: "; const b=document.createElement("b"); b.textContent=label; s.append(b);
-    render();
-  }catch(e){ $("parse-err").textContent=e.message; $("parse-err").hidden=false; }
+    showResults(); render();
+    if(!restoring){ try{ localStorage.setItem("mx_last_csv",JSON.stringify({text,label})); }catch(_){} }
+  }catch(e){ $("parse-err").textContent=e.message; $("parse-err").hidden=false; if(restoring){ try{ localStorage.removeItem("mx_last_csv"); }catch(_){} } }
 }
 
 $("file").addEventListener("change",e=>{ const f=e.target.files[0]; if(!f) return; const fr=new FileReader(); fr.onload=()=>load(String(fr.result),f.name); fr.readAsText(f,"utf-8"); });
@@ -412,7 +387,6 @@ const drop=$("drop");
 drop.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("over");});
 drop.addEventListener("dragleave",()=>drop.classList.remove("over"));
 drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("over"); const f=e.dataTransfer.files[0]; if(!f) return; const fr=new FileReader(); fr.onload=()=>load(String(fr.result),f.name); fr.readAsText(f,"utf-8");});
-$("btn-sample").onclick=()=>load(SAMPLE,"örnek rapor (gerçek veri değildir)");
 $("btn-paste").onclick=()=>load($("paste").value,"yapıştırılan tablo");
 $("margin").addEventListener("input",render);
 $("country").addEventListener("change",render);
@@ -552,7 +526,8 @@ $("btn-pull").onclick=async()=>{
   if(q.has("baglandi")||q.has("hata")) history.replaceState(null,"",location.pathname);
 })();
 
-load(SAMPLE,"örnek rapor (gerçek veri değildir)");
+// Son yüklenen rapor bu tarayıcıda hatırlanır (yalnızca bu cihazda)
+try{ const saved=localStorage.getItem("mx_last_csv"); if(saved){ const o=JSON.parse(saved); if(o&&o.text) load(o.text,o.label,true); } }catch(_){}
 })();
 </script>
 </body>
