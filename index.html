@@ -84,7 +84,7 @@ details summary{cursor:pointer;font-weight:600}
     <div class="plats" id="plats"></div>
     <div class="row">
       <label class="label" for="days">Dönem</label>
-      <select id="days"><option value="7">Son 7 gün</option><option value="30" selected>Son 30 gün</option><option value="90">Son 90 gün</option></select>
+      <select id="days" style="width:auto"><option value="7">Son 7 gün</option><option value="30" selected>Son 30 gün</option><option value="90">Son 90 gün</option></select>
       <button class="primary" id="btn-pull" type="button" disabled>Bağlı hesaplardan verileri çek</button>
       <span class="note" id="pull-msg"></span>
     </div>
@@ -105,7 +105,7 @@ details summary{cursor:pointer;font-weight:600}
           <div><button id="btn-paste" type="button">Yapıştırılanı analiz et</button></div>
         </div>
       </details>
-      <p class="note" style="margin:0">Tanınan sütunlar: Kampanya, Ürün, Harcama (Spend/Cost), Gösterim (Impressions), Tıklama (Clicks), Satış adedi (Purchases/Orders), Ciro (Revenue/Conversion value). Türkçe sayı biçimi (1.250,50) desteklenir.</p>
+      <p class="note" style="margin:0">Tanınan sütunlar: Kampanya, Ürün, Ülke (Country), Harcama (Spend/Cost), Gösterim (Impressions), Tıklama (Clicks), Satış adedi (Purchases/Orders), Ciro (Revenue/Conversion value). Türkçe sayı biçimi (1.250,50) desteklenir.</p>
     </div>
     <div class="row">
       <label class="label" for="margin">Ortalama brüt kâr marjı (%)</label>
@@ -116,8 +116,18 @@ details summary{cursor:pointer;font-weight:600}
   </section>
 
   <section class="panel" aria-labelledby="h-sum">
-    <h2 id="h-sum">Özet</h2>
+    <div class="row" style="justify-content:space-between">
+      <h2 id="h-sum">Özet</h2>
+      <div class="row"><label class="label" for="country">Ülke</label><select id="country" style="width:auto"><option value="">Tüm ülkeler</option></select></div>
+    </div>
     <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section class="panel" id="by-country" aria-labelledby="h-cty" hidden>
+    <h2 id="h-cty">Ülkelere göre</h2>
+    <div class="tablebox"><table id="tbl-c"><thead><tr>
+      <th>Ülke</th><th>Durum</th><th>Harcama</th><th>Ciro</th><th>ROAS</th><th>Satış</th><th>Reklam sonrası kâr</th>
+    </tr></thead><tbody></tbody></table></div>
   </section>
 
   <section class="panel" aria-labelledby="h-tab">
@@ -145,13 +155,18 @@ details summary{cursor:pointer;font-weight:600}
 
 <script>
 (function(){
-const SAMPLE = `Kampanya;Ürün;Harcama;Gösterim;Tıklama;Satış;Ciro
-Kış Montu - Arama;Kadın Kaban;4.850,00;61.200;1.530;38;41.800,00
-Kış Montu - Yeniden Hedefleme;Kadın Kaban;1.920,00;18.400;690;29;31.900,00
-Bot Koleksiyonu - Geniş Kitle;Deri Bot;6.300,00;142.000;2.210;21;18.900,00
-Atkı Bere Set - Vitrin;Atkı Bere Seti;1.150,00;39.500;980;46;16.100,00
-Çocuk Mont - Instagram;Çocuk Mont;3.400,00;88.000;1.120;9;7.650,00
-Termal İçlik - Arama;Termal İçlik;980,00;12.300;410;31;9.920,00`;
+const SAMPLE = `Kampanya;Ürün;Ülke;Harcama;Gösterim;Tıklama;Satış;Ciro
+Kış Montu - Arama;Kadın Kaban;TR;3.600,00;48.000;1.180;31;33.500,00
+Kış Montu - Arama;Kadın Kaban;DE;1.250,00;13.200;350;7;8.300,00
+Kış Montu - Yeniden Hedefleme;Kadın Kaban;TR;1.500,00;14.800;560;24;25.900,00
+Kış Montu - Yeniden Hedefleme;Kadın Kaban;NL;420,00;3.600;130;5;6.000,00
+Bot Koleksiyonu - Geniş Kitle;Deri Bot;TR;4.100,00;97.000;1.540;17;15.300,00
+Bot Koleksiyonu - Geniş Kitle;Deri Bot;AZ;2.200,00;45.000;670;4;3.600,00
+Atkı Bere Set - Vitrin;Atkı Bere Seti;TR;950,00;33.000;820;39;13.700,00
+Atkı Bere Set - Vitrin;Atkı Bere Seti;DE;200,00;6.500;160;7;2.400,00
+Çocuk Mont - Instagram;Çocuk Mont;TR;2.700,00;71.000;930;8;6.800,00
+Çocuk Mont - Instagram;Çocuk Mont;AZ;700,00;17.000;190;1;850,00
+Termal İçlik - Arama;Termal İçlik;TR;980,00;12.300;410;31;9.920,00`;
 
 const $ = id => document.getElementById(id);
 let rows = [];
@@ -161,6 +176,7 @@ const ALIASES = {
   name:["kampanya","kampanya adı","campaign","campaign name","reklam","reklam adı","ad name","ad set name","reklam seti adı"],
   product:["ürün","ürün adı","product","urun","stok kodu","sku"],
   spend:["harcama","harcanan tutar","maliyet","tutar","spend","amount spent","amount spent (try)","cost","reklam harcaması","toplam harcama"],
+  country:["ülke","ulke","country","country/region","ülke/bölge","country code","ülke kodu","region","konum"],
   imp:["gösterim","gösterimler","impressions","impr.","görüntülenme"],
   clicks:["tıklama","tıklamalar","clicks","link clicks","bağlantı tıklamaları"],
   orders:["satış","satış adedi","sipariş","sipariş sayısı","purchases","orders","conversions","dönüşüm","dönüşümler","satılan adet"],
@@ -200,7 +216,7 @@ function parse(text){
   for(let i=1;i<lines.length;i++){
     const c = splitLine(lines[i],d);
     const g = k => idx[k]>=0 ? c[idx[k]] : "";
-    const r = { name:(g("name")||("Satır "+i)).trim(), product:(g("product")||"").trim(),
+    const r = { name:(g("name")||("Satır "+i)).trim(), product:(g("product")||"").trim(), country:(g("country")||"").trim(),
       spend:num(g("spend")), imp:num(g("imp")), clicks:num(g("clicks")), orders:num(g("orders")), revenue:num(g("revenue")) };
     if(/^(toplam|total)/i.test(r.name)) continue;
     if(r.spend||r.revenue) out.push(r);
@@ -225,10 +241,53 @@ function enrich(r){
   return Object.assign({},r,{roas,ctr,cpa,profit,st});
 }
 
+let dn=null; try{ dn=new Intl.DisplayNames(["tr"],{type:"region"}); }catch(_){}
+function cname(c){ if(!c) return "Belirtilmemiş"; if(/^[A-Za-z]{2}$/.test(c)&&dn){ try{ return dn.of(c.toUpperCase()); }catch(_){} } return c; }
+const ckey = c => (c||"").trim().toUpperCase();
+function sumRows(list,keyFn,base){
+  const m=new Map();
+  for(const r of list){ const k=keyFn(r); let a=m.get(k);
+    if(!a){ a=Object.assign({spend:0,imp:0,clicks:0,orders:0,revenue:0,countries:new Set()},base(r)); m.set(k,a); }
+    a.spend+=r.spend; a.imp+=r.imp; a.clicks+=r.clicks; a.orders+=r.orders; a.revenue+=r.revenue; if(r.country) a.countries.add(ckey(r.country)); }
+  return [...m.values()];
+}
+function hasCountry(){ return rows.some(r=>r.country); }
+function view(){
+  const c=$("country").value;
+  const list = c ? rows.filter(r=>ckey(r.country)===c) : rows;
+  return sumRows(list, r=>r.name+"\u0000"+r.product, r=>({name:r.name,product:r.product}));
+}
+function fillCountries(){
+  const sel=$("country"), prev=sel.value;
+  const codes=[...new Set(rows.map(r=>ckey(r.country)).filter(Boolean))];
+  const spend=c=>rows.filter(r=>ckey(r.country)===c).reduce((a,r)=>a+r.spend,0);
+  codes.sort((a,b)=>spend(b)-spend(a));
+  sel.textContent=""; const all=document.createElement("option"); all.value=""; all.textContent="Tüm ülkeler"; sel.append(all);
+  for(const c of codes){ const o=document.createElement("option"); o.value=c; o.textContent=cname(c); sel.append(o); }
+  sel.value = codes.includes(prev)? prev : "";
+  sel.disabled = !codes.length;
+  if(!codes.length){ all.textContent="Raporda ülke bilgisi yok"; }
+}
+function renderCountries(){
+  const box=$("by-country"); if(!hasCountry()){ box.hidden=true; return; }
+  box.hidden=false; const be=1/margin();
+  const list=sumRows(rows.filter(r=>r.country), r=>ckey(r.country), r=>({name:ckey(r.country)})).map(enrich).sort((a,b)=>b.spend-a.spend);
+  const tb=$("tbl-c").querySelector("tbody"); tb.textContent="";
+  const sel=$("country").value;
+  for(const r of list){
+    const tr=document.createElement("tr"); if(sel&&sel===r.name) tr.style.background="var(--accent-soft)";
+    const cell=(t,cls)=>{const td=document.createElement("td"); if(cls) td.className=cls; td.textContent=t; tr.append(td); return td;};
+    cell(cname(r.name));
+    const sc=document.createElement("td"); const p=document.createElement("span"); p.className="pill "+r.st[0]; p.textContent=r.st[1]; sc.append(p); tr.append(sc);
+    cell(tl(r.spend)); cell(tl(r.revenue)); cell(f2(r.roas), r.roas<be?"neg":""); cell(String(r.orders)); cell(tl(r.profit), r.profit<0?"neg":"pos");
+    tb.append(tr);
+  }
+}
 function render(){
   const m = margin(), be = 1/m;
   $("be").textContent = "Başabaş ROAS: "+f2(be)+" (her 1 TL reklama en az "+f2(be)+" TL ciro)";
-  const list = rows.map(enrich);
+  const list = view().map(enrich);
+  renderCountries();
   const tot = list.reduce((a,r)=>({spend:a.spend+r.spend,revenue:a.revenue+r.revenue,profit:a.profit+r.profit,orders:a.orders+r.orders}),{spend:0,revenue:0,profit:0,orders:0});
   const losing = list.filter(r=>r.st[0]==="bad");
   const lossSpend = losing.reduce((a,r)=>a+r.spend,0);
@@ -248,7 +307,7 @@ function render(){
   list.sort((a,b)=>a.roas-b.roas).forEach(r=>{
     const tr=document.createElement("tr");
     const cell=(t,cls)=>{const td=document.createElement("td"); if(cls) td.className=cls; td.textContent=t; tr.append(td); return td;};
-    const n=cell(r.name); if(r.product){ const s=document.createElement("div"); s.className="note"; s.textContent=r.product; n.append(s); }
+    const n=cell(r.name); const sub=[r.product, r.countries&&r.countries.size>1&&!$("country").value ? r.countries.size+" ülke" : (r.countries&&r.countries.size===1? cname([...r.countries][0]) : "")].filter(Boolean).join(" · "); if(sub){ const s=document.createElement("div"); s.className="note"; s.textContent=sub; n.append(s); }
     const sc=document.createElement("td"); const p=document.createElement("span"); p.className="pill "+r.st[0]; p.textContent=r.st[1]; sc.append(p); tr.append(sc);
     cell(tl(r.spend)); cell(tl(r.revenue)); cell(f2(r.roas), r.roas<be?"neg":"");
     cell(r.ctr==null?"–":pct(r.ctr)); cell(r.cpa==null?"–":tl(r.cpa));
@@ -258,12 +317,12 @@ function render(){
 }
 
 function loadRows(list,label){
-  rows=list; srcLabel=label; $("parse-err").hidden=true;
+  rows=list; srcLabel=label; $("parse-err").hidden=true; fillCountries();
   const s=$("src"); s.textContent="Şu an gösterilen: "; const b=document.createElement("b"); b.textContent=label; s.append(b);
   render();
 }
 function load(text,label){
-  try{ rows = parse(text); srcLabel=label; $("parse-err").hidden=true;
+  try{ rows = parse(text); srcLabel=label; $("parse-err").hidden=true; fillCountries();
     const s=$("src"); s.textContent="Şu an gösterilen: "; const b=document.createElement("b"); b.textContent=label; s.append(b);
     render();
   }catch(e){ $("parse-err").textContent=e.message; $("parse-err").hidden=false; }
@@ -277,6 +336,7 @@ drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("over"
 $("btn-sample").onclick=()=>load(SAMPLE,"örnek rapor (gerçek veri değildir)");
 $("btn-paste").onclick=()=>load($("paste").value,"yapıştırılan tablo");
 $("margin").addEventListener("input",render);
+$("country").addEventListener("change",render);
 
 /* ---------- Yapay zekâ ---------- */
 let sample=null, ctl=null;
@@ -284,8 +344,9 @@ const ans=$("answer");
 function dataForAI(){
   const m=margin();
   return "Kâr marjı: %"+Math.round(m*100)+" (başabaş ROAS "+f2(1/m)+")\n"+
-    "Kampanya | Ürün | Harcama TL | Gösterim | Tıklama | Satış | Ciro TL | ROAS | Reklam sonrası kâr TL\n"+
-    rows.map(enrich).map(r=>[r.name,r.product||"-",Math.round(r.spend),r.imp,r.clicks,r.orders,Math.round(r.revenue),f2(r.roas),Math.round(r.profit)].join(" | ")).join("\n");
+    "Ülke filtresi: "+($("country").value? cname($("country").value) : "tüm ülkeler")+"\n"+
+    "Kampanya | Ürün | Ülke | Harcama TL | Gösterim | Tıklama | Satış | Ciro TL | ROAS | Reklam sonrası kâr TL\n"+
+    (($("country").value? rows.filter(r=>ckey(r.country)===$("country").value) : rows)).map(enrich).map(r=>[r.name,r.product||"-",cname(r.country),Math.round(r.spend),r.imp,r.clicks,r.orders,Math.round(r.revenue),f2(r.roas),Math.round(r.profit)].join(" | ")).join("\n");
 }
 const PROMPT_ANALYZE = d => `Sen Türk e-ticaret satıcılarına (Trendyol, Hepsiburada, kendi sitesi; Meta ve Google reklamları) danışmanlık yapan deneyimli bir performans pazarlama uzmanısın. Aşağıdaki reklam raporunu bir küçük işletme sahibine sade Türkçe ile yorumla. Jargon kullanırsan parantez içinde açıkla. Sayıları tablodan al, uydurma.
 
@@ -293,7 +354,7 @@ Yanıtı tam olarak şu başlıklarla, düz metin olarak yaz (Markdown işareti 
 1) KISA ÖZET (2-3 cümle)
 2) PARA KAYBETTİREN REKLAMLAR (her biri için neden ve ne yapılmalı)
 3) BÜTÇE ÖNERİSİ (hangi kampanyadan ne kadar TL alınıp nereye aktarılmalı, gerekçesiyle)
-4) ÖNE ÇIKARILACAK ÜRÜNLER
+4) ÖNE ÇIKARILACAK ÜRÜNLER (rapor ülke bilgisi içeriyorsa hangi ülkelerde büyünüp hangilerinde kısılacağını da yaz)
 5) BU HAFTA YAPILACAK 3 İŞ
 
 Rapor:
