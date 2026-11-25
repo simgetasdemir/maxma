@@ -38,6 +38,7 @@ button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(
 button:disabled{opacity:.55;cursor:default}
 button:focus-visible,.filebtn:focus-within,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 input[type=file]{position:absolute;opacity:0;width:1px;height:1px}
+input[type=date]{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
 input[type=number],select{font:inherit;padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:7.5em}
 textarea{font-family:var(--font-mono);font-size:.8rem;width:100%;min-height:120px;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);resize:vertical}
 .badge{display:inline-block;font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
@@ -84,7 +85,8 @@ details summary{cursor:pointer;font-weight:600}
     <div class="plats" id="plats"></div>
     <div class="row">
       <label class="label" for="days">Dönem</label>
-      <select id="days"><option value="7">Son 7 gün</option><option value="30" selected>Son 30 gün</option><option value="90">Son 90 gün</option></select>
+      <select id="days" style="width:auto"><option value="7">Son 7 gün</option><option value="30" selected>Son 30 gün</option><option value="90">Son 90 gün</option><option value="custom">Tarih seç</option></select>
+      <span class="row" id="custom-range" hidden><input type="date" id="p-from" aria-label="Başlangıç tarihi"><span aria-hidden="true">–</span><input type="date" id="p-to" aria-label="Bitiş tarihi"></span>
       <button class="primary" id="btn-pull" type="button" disabled>Bağlı hesaplardan verileri çek</button>
       <span class="note" id="pull-msg"></span>
     </div>
@@ -105,7 +107,7 @@ details summary{cursor:pointer;font-weight:600}
           <div><button id="btn-paste" type="button">Yapıştırılanı analiz et</button></div>
         </div>
       </details>
-      <p class="note" style="margin:0">Tanınan sütunlar: Kampanya, Ürün, Harcama (Spend/Cost), Gösterim (Impressions), Tıklama (Clicks), Satış adedi (Purchases/Orders), Ciro (Revenue/Conversion value). Türkçe sayı biçimi (1.250,50) desteklenir.</p>
+      <p class="note" style="margin:0">Tanınan sütunlar: Tarih (Date/Day), Kampanya, Ürün, Ülke (Country), Harcama (Spend/Cost), Gösterim (Impressions), Tıklama (Clicks), Satış adedi (Purchases/Orders), Ciro (Revenue/Conversion value). Türkçe sayı biçimi (1.250,50) desteklenir.</p>
     </div>
     <div class="row">
       <label class="label" for="margin">Ortalama brüt kâr marjı (%)</label>
@@ -116,8 +118,29 @@ details summary{cursor:pointer;font-weight:600}
   </section>
 
   <section class="panel" aria-labelledby="h-sum">
-    <h2 id="h-sum">Özet</h2>
+    <div class="row" style="justify-content:space-between">
+      <h2 id="h-sum">Özet</h2>
+      <div class="row">
+        <span class="row" id="date-filter" hidden><label class="label" for="d-from">Tarih</label><input type="date" id="d-from"><span aria-hidden="true">–</span><input type="date" id="d-to" aria-label="Bitiş tarihi"></span>
+        <label class="label" for="country">Ülke</label><select id="country" style="width:auto"><option value="">Tüm ülkeler</option></select>
+      </div>
+    </div>
+    <p class="note" id="period" style="margin:0"></p>
     <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section class="panel" id="by-date" aria-labelledby="h-dt" hidden>
+    <h2 id="h-dt">Tarihe göre</h2>
+    <div class="tablebox"><table id="tbl-d"><thead><tr>
+      <th>Tarih</th><th>Durum</th><th>Harcama</th><th>Ciro</th><th>ROAS</th><th>Satış</th><th>Reklam sonrası kâr</th>
+    </tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="panel" id="by-country" aria-labelledby="h-cty" hidden>
+    <h2 id="h-cty">Ülkelere göre</h2>
+    <div class="tablebox"><table id="tbl-c"><thead><tr>
+      <th>Ülke</th><th>Durum</th><th>Harcama</th><th>Ciro</th><th>ROAS</th><th>Satış</th><th>Reklam sonrası kâr</th>
+    </tr></thead><tbody></tbody></table></div>
   </section>
 
   <section class="panel" aria-labelledby="h-tab">
@@ -145,13 +168,40 @@ details summary{cursor:pointer;font-weight:600}
 
 <script>
 (function(){
-const SAMPLE = `Kampanya;Ürün;Harcama;Gösterim;Tıklama;Satış;Ciro
-Kış Montu - Arama;Kadın Kaban;4.850,00;61.200;1.530;38;41.800,00
-Kış Montu - Yeniden Hedefleme;Kadın Kaban;1.920,00;18.400;690;29;31.900,00
-Bot Koleksiyonu - Geniş Kitle;Deri Bot;6.300,00;142.000;2.210;21;18.900,00
-Atkı Bere Set - Vitrin;Atkı Bere Seti;1.150,00;39.500;980;46;16.100,00
-Çocuk Mont - Instagram;Çocuk Mont;3.400,00;88.000;1.120;9;7.650,00
-Termal İçlik - Arama;Termal İçlik;980,00;12.300;410;31;9.920,00`;
+const SAMPLE = `Tarih;Kampanya;Ürün;Ülke;Harcama;Gösterim;Tıklama;Satış;Ciro
+2026-11-03;Kış Montu - Arama;Kadın Kaban;TR;1.080,00;14.400;354;9;10.050,00
+2026-11-10;Kış Montu - Arama;Kadın Kaban;TR;1.188,00;15.840;389;10;11.055,00
+2026-11-17;Kış Montu - Arama;Kadın Kaban;TR;1.332,00;17.760;437;11;12.395,00
+2026-11-03;Kış Montu - Arama;Kadın Kaban;DE;375,00;3.960;105;2;2.490,00
+2026-11-10;Kış Montu - Arama;Kadın Kaban;DE;412,50;4.356;116;2;2.739,00
+2026-11-17;Kış Montu - Arama;Kadın Kaban;DE;462,50;4.884;130;3;3.071,00
+2026-11-03;Kış Montu - Yeniden Hedefleme;Kadın Kaban;TR;450,00;4.440;168;7;7.770,00
+2026-11-10;Kış Montu - Yeniden Hedefleme;Kadın Kaban;TR;495,00;4.884;185;8;8.547,00
+2026-11-17;Kış Montu - Yeniden Hedefleme;Kadın Kaban;TR;555,00;5.476;207;9;9.583,00
+2026-11-03;Kış Montu - Yeniden Hedefleme;Kadın Kaban;NL;126,00;1.080;39;2;1.800,00
+2026-11-10;Kış Montu - Yeniden Hedefleme;Kadın Kaban;NL;138,60;1.188;43;2;1.980,00
+2026-11-17;Kış Montu - Yeniden Hedefleme;Kadın Kaban;NL;155,40;1.332;48;2;2.220,00
+2026-11-03;Bot Koleksiyonu - Geniş Kitle;Deri Bot;TR;1.230,00;29.100;462;5;4.590,00
+2026-11-10;Bot Koleksiyonu - Geniş Kitle;Deri Bot;TR;1.353,00;32.010;508;6;5.049,00
+2026-11-17;Bot Koleksiyonu - Geniş Kitle;Deri Bot;TR;1.517,00;35.890;570;6;5.661,00
+2026-11-03;Bot Koleksiyonu - Geniş Kitle;Deri Bot;AZ;660,00;13.500;201;1;1.080,00
+2026-11-10;Bot Koleksiyonu - Geniş Kitle;Deri Bot;AZ;726,00;14.850;221;1;1.188,00
+2026-11-17;Bot Koleksiyonu - Geniş Kitle;Deri Bot;AZ;814,00;16.650;248;1;1.332,00
+2026-11-03;Atkı Bere Set - Vitrin;Atkı Bere Seti;TR;285,00;9.900;246;12;4.110,00
+2026-11-10;Atkı Bere Set - Vitrin;Atkı Bere Seti;TR;313,50;10.890;271;13;4.521,00
+2026-11-17;Atkı Bere Set - Vitrin;Atkı Bere Seti;TR;351,50;12.210;303;14;5.069,00
+2026-11-03;Atkı Bere Set - Vitrin;Atkı Bere Seti;DE;60,00;1.950;48;2;720,00
+2026-11-10;Atkı Bere Set - Vitrin;Atkı Bere Seti;DE;66,00;2.145;53;2;792,00
+2026-11-17;Atkı Bere Set - Vitrin;Atkı Bere Seti;DE;74,00;2.405;59;3;888,00
+2026-11-03;Çocuk Mont - Instagram;Çocuk Mont;TR;810,00;21.300;279;2;2.040,00
+2026-11-10;Çocuk Mont - Instagram;Çocuk Mont;TR;891,00;23.430;307;3;2.244,00
+2026-11-17;Çocuk Mont - Instagram;Çocuk Mont;TR;999,00;26.270;344;3;2.516,00
+2026-11-03;Çocuk Mont - Instagram;Çocuk Mont;AZ;210,00;5.100;57;0;255,00
+2026-11-10;Çocuk Mont - Instagram;Çocuk Mont;AZ;231,00;5.610;63;0;280,50
+2026-11-17;Çocuk Mont - Instagram;Çocuk Mont;AZ;259,00;6.290;70;0;314,50
+2026-11-03;Termal İçlik - Arama;Termal İçlik;TR;294,00;3.690;123;9;2.976,00
+2026-11-10;Termal İçlik - Arama;Termal İçlik;TR;323,40;4.059;135;10;3.273,60
+2026-11-17;Termal İçlik - Arama;Termal İçlik;TR;362,60;4.551;152;11;3.670,40`;
 
 const $ = id => document.getElementById(id);
 let rows = [];
@@ -161,6 +211,8 @@ const ALIASES = {
   name:["kampanya","kampanya adı","campaign","campaign name","reklam","reklam adı","ad name","ad set name","reklam seti adı"],
   product:["ürün","ürün adı","product","urun","stok kodu","sku"],
   spend:["harcama","harcanan tutar","maliyet","tutar","spend","amount spent","amount spent (try)","cost","reklam harcaması","toplam harcama"],
+  date:["tarih","gün","gun","date","day","başlangıç tarihi","reporting starts","rapor başlangıcı","stat_time_day"],
+  country:["ülke","ulke","country","country/region","ülke/bölge","country code","ülke kodu","region","konum"],
   imp:["gösterim","gösterimler","impressions","impr.","görüntülenme"],
   clicks:["tıklama","tıklamalar","clicks","link clicks","bağlantı tıklamaları"],
   orders:["satış","satış adedi","sipariş","sipariş sayısı","purchases","orders","conversions","dönüşüm","dönüşümler","satılan adet"],
@@ -178,6 +230,13 @@ function num(v){
   const n = parseFloat(s); return isFinite(n)?n:0;
 }
 
+function pdate(v){
+  v=String(v||"").trim().replace(/^"|"$/g,""); if(!v) return "";
+  let m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m) return m[1]+"-"+m[2].padStart(2,"0")+"-"+m[3].padStart(2,"0");
+  m=v.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})/); if(m) return m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0");
+  const t=Date.parse(v); if(!isNaN(t)){ const d=new Date(t); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  return "";
+}
 function splitLine(line, d){
   const out=[]; let cur="", q=false;
   for(let i=0;i<line.length;i++){ const c=line[i];
@@ -200,7 +259,7 @@ function parse(text){
   for(let i=1;i<lines.length;i++){
     const c = splitLine(lines[i],d);
     const g = k => idx[k]>=0 ? c[idx[k]] : "";
-    const r = { name:(g("name")||("Satır "+i)).trim(), product:(g("product")||"").trim(),
+    const r = { name:(g("name")||("Satır "+i)).trim(), product:(g("product")||"").trim(), country:(g("country")||"").trim(), date:pdate(g("date")),
       spend:num(g("spend")), imp:num(g("imp")), clicks:num(g("clicks")), orders:num(g("orders")), revenue:num(g("revenue")) };
     if(/^(toplam|total)/i.test(r.name)) continue;
     if(r.spend||r.revenue) out.push(r);
@@ -225,10 +284,89 @@ function enrich(r){
   return Object.assign({},r,{roas,ctr,cpa,profit,st});
 }
 
+let dn=null; try{ dn=new Intl.DisplayNames(["tr"],{type:"region"}); }catch(_){}
+function cname(c){ if(!c) return "Belirtilmemiş"; if(/^[A-Za-z]{2}$/.test(c)&&dn){ try{ return dn.of(c.toUpperCase()); }catch(_){} } return c; }
+const ckey = c => (c||"").trim().toUpperCase();
+function sumRows(list,keyFn,base){
+  const m=new Map();
+  for(const r of list){ const k=keyFn(r); let a=m.get(k);
+    if(!a){ a=Object.assign({spend:0,imp:0,clicks:0,orders:0,revenue:0,countries:new Set()},base(r)); m.set(k,a); }
+    a.spend+=r.spend; a.imp+=r.imp; a.clicks+=r.clicks; a.orders+=r.orders; a.revenue+=r.revenue; if(r.country) a.countries.add(ckey(r.country)); }
+  return [...m.values()];
+}
+function hasCountry(){ return rows.some(r=>r.country); }
+function hasDate(){ return rows.some(r=>r.date); }
+const fmtD = d => { if(!d) return ""; const [y,m,dd]=d.split("-"); return new Date(+y,+m-1,+dd).toLocaleDateString("tr-TR",{day:"numeric",month:"long",year:"numeric"}); };
+function byDate(){
+  const a=$("d-from").value, b=$("d-to").value;
+  if(!hasDate()||(!a&&!b)) return rows;
+  return rows.filter(r=>!r.date || ((!a||r.date>=a)&&(!b||r.date<=b)));
+}
+function filtered(){ const c=$("country").value; const l=byDate(); return c? l.filter(r=>ckey(r.country)===c) : l; }
+function fillDates(){
+  const ds=rows.map(r=>r.date).filter(Boolean).sort();
+  const box=$("date-filter"); box.hidden=!ds.length;
+  for(const id of ["d-from","d-to"]){ const el=$(id); el.min=ds[0]||""; el.max=ds[ds.length-1]||""; }
+  $("d-from").value=ds[0]||""; $("d-to").value=ds[ds.length-1]||"";
+}
+function renderPeriod(){
+  const ds=filtered().map(r=>r.date).filter(Boolean).sort();
+  const p=$("period");
+  if(ds.length){ const days=Math.round((Date.parse(ds[ds.length-1])-Date.parse(ds[0]))/864e5)+1;
+    p.textContent="Dönem: "+fmtD(ds[0])+" – "+fmtD(ds[ds.length-1])+" ("+days+" gün)"; }
+  else p.textContent=hasDate()? "Seçilen tarihlerde veri yok." : "Raporda tarih bilgisi yok; tüm satırlar tek dönem olarak gösteriliyor.";
+}
+function renderDates(){
+  const box=$("by-date"); if(!hasDate()){ box.hidden=true; return; }
+  box.hidden=false; const be=1/margin();
+  const c=$("country").value; const src=byDate().filter(r=>r.date&&(!c||ckey(r.country)===c));
+  const list=sumRows(src, r=>r.date, r=>({name:r.date})).map(enrich).sort((a,b)=>a.name<b.name?-1:1);
+  const tb=$("tbl-d").querySelector("tbody"); tb.textContent="";
+  for(const r of list){
+    const tr=document.createElement("tr");
+    const cell=(t,cls)=>{const td=document.createElement("td"); if(cls) td.className=cls; td.textContent=t; tr.append(td); return td;};
+    cell(fmtD(r.name));
+    const sc=document.createElement("td"); const p=document.createElement("span"); p.className="pill "+r.st[0]; p.textContent=r.st[1]; sc.append(p); tr.append(sc);
+    cell(tl(r.spend)); cell(tl(r.revenue)); cell(f2(r.roas), r.roas<be?"neg":""); cell(String(r.orders)); cell(tl(r.profit), r.profit<0?"neg":"pos");
+    tb.append(tr);
+  }
+}
+function view(){
+  return sumRows(filtered(), r=>r.name+"\u0000"+r.product, r=>({name:r.name,product:r.product}));
+}
+function fillCountries(){
+  const sel=$("country"), prev=sel.value;
+  const codes=[...new Set(rows.map(r=>ckey(r.country)).filter(Boolean))];
+  const spend=c=>rows.filter(r=>ckey(r.country)===c).reduce((a,r)=>a+r.spend,0);
+  codes.sort((a,b)=>spend(b)-spend(a));
+  sel.textContent=""; const all=document.createElement("option"); all.value=""; all.textContent="Tüm ülkeler"; sel.append(all);
+  for(const c of codes){ const o=document.createElement("option"); o.value=c; o.textContent=cname(c); sel.append(o); }
+  sel.value = codes.includes(prev)? prev : "";
+  sel.disabled = !codes.length;
+  if(!codes.length){ all.textContent="Raporda ülke bilgisi yok"; }
+}
+function renderCountries(){
+  const box=$("by-country"); if(!hasCountry()){ box.hidden=true; return; }
+  box.hidden=false; const be=1/margin();
+  const list=sumRows(byDate().filter(r=>r.country), r=>ckey(r.country), r=>({name:ckey(r.country)})).map(enrich).sort((a,b)=>b.spend-a.spend);
+  const tb=$("tbl-c").querySelector("tbody"); tb.textContent="";
+  const sel=$("country").value;
+  for(const r of list){
+    const tr=document.createElement("tr"); if(sel&&sel===r.name) tr.style.background="var(--accent-soft)";
+    const cell=(t,cls)=>{const td=document.createElement("td"); if(cls) td.className=cls; td.textContent=t; tr.append(td); return td;};
+    cell(cname(r.name));
+    const sc=document.createElement("td"); const p=document.createElement("span"); p.className="pill "+r.st[0]; p.textContent=r.st[1]; sc.append(p); tr.append(sc);
+    cell(tl(r.spend)); cell(tl(r.revenue)); cell(f2(r.roas), r.roas<be?"neg":""); cell(String(r.orders)); cell(tl(r.profit), r.profit<0?"neg":"pos");
+    tb.append(tr);
+  }
+}
 function render(){
   const m = margin(), be = 1/m;
   $("be").textContent = "Başabaş ROAS: "+f2(be)+" (her 1 TL reklama en az "+f2(be)+" TL ciro)";
-  const list = rows.map(enrich);
+  const list = view().map(enrich);
+  renderCountries();
+  renderDates();
+  renderPeriod();
   const tot = list.reduce((a,r)=>({spend:a.spend+r.spend,revenue:a.revenue+r.revenue,profit:a.profit+r.profit,orders:a.orders+r.orders}),{spend:0,revenue:0,profit:0,orders:0});
   const losing = list.filter(r=>r.st[0]==="bad");
   const lossSpend = losing.reduce((a,r)=>a+r.spend,0);
@@ -248,7 +386,7 @@ function render(){
   list.sort((a,b)=>a.roas-b.roas).forEach(r=>{
     const tr=document.createElement("tr");
     const cell=(t,cls)=>{const td=document.createElement("td"); if(cls) td.className=cls; td.textContent=t; tr.append(td); return td;};
-    const n=cell(r.name); if(r.product){ const s=document.createElement("div"); s.className="note"; s.textContent=r.product; n.append(s); }
+    const n=cell(r.name); const sub=[r.product, r.countries&&r.countries.size>1&&!$("country").value ? r.countries.size+" ülke" : (r.countries&&r.countries.size===1? cname([...r.countries][0]) : "")].filter(Boolean).join(" · "); if(sub){ const s=document.createElement("div"); s.className="note"; s.textContent=sub; n.append(s); }
     const sc=document.createElement("td"); const p=document.createElement("span"); p.className="pill "+r.st[0]; p.textContent=r.st[1]; sc.append(p); tr.append(sc);
     cell(tl(r.spend)); cell(tl(r.revenue)); cell(f2(r.roas), r.roas<be?"neg":"");
     cell(r.ctr==null?"–":pct(r.ctr)); cell(r.cpa==null?"–":tl(r.cpa));
@@ -258,12 +396,12 @@ function render(){
 }
 
 function loadRows(list,label){
-  rows=list; srcLabel=label; $("parse-err").hidden=true;
+  rows=list; srcLabel=label; $("parse-err").hidden=true; fillCountries(); fillDates();
   const s=$("src"); s.textContent="Şu an gösterilen: "; const b=document.createElement("b"); b.textContent=label; s.append(b);
   render();
 }
 function load(text,label){
-  try{ rows = parse(text); srcLabel=label; $("parse-err").hidden=true;
+  try{ rows = parse(text); srcLabel=label; $("parse-err").hidden=true; fillCountries(); fillDates();
     const s=$("src"); s.textContent="Şu an gösterilen: "; const b=document.createElement("b"); b.textContent=label; s.append(b);
     render();
   }catch(e){ $("parse-err").textContent=e.message; $("parse-err").hidden=false; }
@@ -277,6 +415,9 @@ drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("over"
 $("btn-sample").onclick=()=>load(SAMPLE,"örnek rapor (gerçek veri değildir)");
 $("btn-paste").onclick=()=>load($("paste").value,"yapıştırılan tablo");
 $("margin").addEventListener("input",render);
+$("country").addEventListener("change",render);
+$("d-from").addEventListener("change",render);
+$("d-to").addEventListener("change",render);
 
 /* ---------- Yapay zekâ ---------- */
 let sample=null, ctl=null;
@@ -284,8 +425,11 @@ const ans=$("answer");
 function dataForAI(){
   const m=margin();
   return "Kâr marjı: %"+Math.round(m*100)+" (başabaş ROAS "+f2(1/m)+")\n"+
-    "Kampanya | Ürün | Harcama TL | Gösterim | Tıklama | Satış | Ciro TL | ROAS | Reklam sonrası kâr TL\n"+
-    rows.map(enrich).map(r=>[r.name,r.product||"-",Math.round(r.spend),r.imp,r.clicks,r.orders,Math.round(r.revenue),f2(r.roas),Math.round(r.profit)].join(" | ")).join("\n");
+    ($("period").textContent? $("period").textContent+"\n" : "")+
+    "Ülke filtresi: "+($("country").value? cname($("country").value) : "tüm ülkeler")+"\n"+
+    "(Satırlar kampanya ve ülke bazında toplanmıştır)\n"+
+    "Kampanya | Ürün | Ülke | Harcama TL | Gösterim | Tıklama | Satış | Ciro TL | ROAS | Reklam sonrası kâr TL\n"+
+    sumRows(filtered(), r=>r.name+"\u0000"+r.product+"\u0000"+ckey(r.country), r=>({name:r.name,product:r.product,country:ckey(r.country)})).map(enrich).map(r=>[r.name,r.product||"-",cname(r.country),Math.round(r.spend),r.imp,r.clicks,r.orders,Math.round(r.revenue),f2(r.roas),Math.round(r.profit)].join(" | ")).join("\n");
 }
 const PROMPT_ANALYZE = d => `Sen Türk e-ticaret satıcılarına (Trendyol, Hepsiburada, kendi sitesi; Meta ve Google reklamları) danışmanlık yapan deneyimli bir performans pazarlama uzmanısın. Aşağıdaki reklam raporunu bir küçük işletme sahibine sade Türkçe ile yorumla. Jargon kullanırsan parantez içinde açıkla. Sayıları tablodan al, uydurma.
 
@@ -293,7 +437,7 @@ Yanıtı tam olarak şu başlıklarla, düz metin olarak yaz (Markdown işareti 
 1) KISA ÖZET (2-3 cümle)
 2) PARA KAYBETTİREN REKLAMLAR (her biri için neden ve ne yapılmalı)
 3) BÜTÇE ÖNERİSİ (hangi kampanyadan ne kadar TL alınıp nereye aktarılmalı, gerekçesiyle)
-4) ÖNE ÇIKARILACAK ÜRÜNLER
+4) ÖNE ÇIKARILACAK ÜRÜNLER (rapor ülke bilgisi içeriyorsa hangi ülkelerde büyünüp hangilerinde kısılacağını da yaz)
 5) BU HAFTA YAPILACAK 3 İŞ
 
 Rapor:
@@ -383,17 +527,22 @@ function setupConnect(p){
   }
   $("btn-pull").disabled=!Object.values(p).some(x=>x.connected);
 }
+$("days").addEventListener("change",()=>{ $("custom-range").hidden=$("days").value!=="custom"; });
 $("btn-pull").onclick=async()=>{
   const btn=$("btn-pull"), msg=$("pull-msg"); btn.disabled=true; msg.textContent="Veriler çekiliyor...";
   const days=$("days").value, all=[], errs=[];
+  let qs="&days="+days, lbl="son "+days+" gün";
+  if(days==="custom"){ const a=$("p-from").value, b=$("p-to").value;
+    if(!a||!b||a>b){ msg.textContent="Başlangıç ve bitiş tarihini seçin."; btn.disabled=false; return; }
+    qs="&start="+a+"&end="+b; lbl=fmtD(a)+" – "+fmtD(b); }
   const keys=Object.keys(PL).filter(k=>plats[k]&&plats[k].connected);
   await Promise.all(keys.map(async k=>{
-    try{ const r=await fetch("/api/report?platform="+k+"&days="+days,{cache:"no-store"}); const d=await r.json();
+    try{ const r=await fetch("/api/report?platform="+k+qs,{cache:"no-store"}); const d=await r.json();
       if(!r.ok) throw new Error(d.error||r.status); all.push(...d.rows);
     }catch(e){ errs.push(PL[k]+": "+e.message); }
   }));
   btn.disabled=false;
-  if(all.length){ loadRows(all,"bağlı hesaplar, son "+days+" gün ("+all.length+" kampanya)"); }
+  if(all.length){ loadRows(all,"bağlı hesaplar, "+lbl); }
   msg.textContent = errs.length ? "Bazı hesaplar okunamadı. "+errs.join(" · ") : (all.length? "Güncellendi." : "Bu dönemde kampanya verisi bulunamadı.");
 };
 (function(){
